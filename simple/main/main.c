@@ -94,7 +94,23 @@
 
 static const char *TAG = "ServidorSimple";
 
-// LED
+/* Motores AspiradO3 */
+// WIP Arreglar conflicto con el LED
+// Motor Aspirador
+#define PIN_ASPIRADOR 18
+// Motor interno que redirige hacia adelante o atrás
+#define PIN_TIMON_INTERNO_A 19
+#define PIN_TIMON_INTERNO_R 21
+// Motor del timón externo - nos basamos en la capacidad de que el timón se reoriente automáticamente cuando el motor se apague gracias al flujo de aire.
+#define PIN_TIMON_EXTERNO_A 22
+#define PIN_TIMON_EXTERNO_R 23
+
+
+/* Sensores ozono */
+// WIP
+
+
+/* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
 #define BLINK_GPIO CONFIG_BLINK_GPIO
 #define GPIO_WAKEUP_NUM PIN_SWITCH
@@ -194,17 +210,25 @@ int contadorAdormir = 0;
 int sleepEnabled = 0; // Hemos dejado el sleep inhabilitado porque al final no es esencial
 int http2Caido = 0;
 
-// LEDes y algunos datos
+// LEDes, motores y algunos datos
 
 static uint8_t s_led_state = 0; // Estado del led
 
-static uint8_t s_switch_state = 0; // Estado del switch
+static uint8_t s_switch_state = 0; // Estado del switch TO-DO borrar en final
+
+static uint8_t s_aspirador_state = 0; // Estado del aspirador 0 - apagado, 1 - encendido
+int estadoTimonInterno = 0; // Estado del timon interno, 0 - inicial o desconocido, 1 - posición levantada, 2 - posición bajada
+int estadoTimonExterno = 0; // Estado del timon externo, 0 - inicial o centrado, 1 - babor, 2 - estribor
 
 int s_reset_state = 0; // tiempo hasta resetear. 0 es que no se resetea
 
-int voltajeHidro = 0; // Voltaje generado por las turbinas
+int voltajeHidro = 0; // Voltaje generado por las turbinas TO-DO en modelo final, borrar
 
-int voltajeSolar = 0; // Voltaje generado por los paneles
+int voltajeSolar = 0; // Voltaje generado por el panel solar del globo
+
+int ozonoBabor = 0; // Ozono detectado por el sensor de babor
+int ozonoEstribor = 0; // Ozono detectado por el sensor de estribor
+int ozonoTrasFiltro = 0; // Ozono detectado tras el filtro activo de carbono
 
 int datoI2CCO2legible = 0; // Concentracion de quimicos en el agua, usamos el sensor de CO2 como mock
 
@@ -245,6 +269,8 @@ static void blink_led(void)
     }
 }
 
+
+
 static void configure_led(void)
 {
     ESP_LOGI(TAG, "Example configured to blink addressable LED!");
@@ -271,6 +297,62 @@ static void configure_led(void)
 }
 
 #endif
+
+static void blink_motorAspirador(void)
+{
+    /* Set the GPIO level according to the state (LOW or HIGH)*/
+    gpio_set_level(PIN_ASPIRADOR, s_aspirador_state);
+}
+
+static void blink_motorTimon(gpio_num_t pin1, gpio_num_t pin2, int estado_grupo)
+{
+    /* Set the GPIO level according to the state (LOW or HIGH)*/
+    uint32_t sentido;
+    uint32_t sentido2;
+    switch (estado_grupo)
+    {
+    case 0:
+        ESP_LOGI(TAG, "FRENTE");
+        sentido = false;
+        sentido2 = false;
+        break;
+    case 1:
+        ESP_LOGI(TAG, "BABOR");
+        sentido = true;
+        sentido2 = false;
+        break;
+    case 2:
+        ESP_LOGI(TAG, "ESTRIBOR");
+        sentido = false;
+        sentido2 = true;
+        break;
+    default:
+        ESP_LOGI(TAG, "Other, AN ERROR PERHAPS");
+        sentido = false;
+        sentido2 = false;
+        break;
+    } 
+    gpio_set_level(pin1, sentido);
+    gpio_set_level(pin2, sentido2);
+}
+
+// Motores de corriente continua, para el aspirador y posiblemente uno de los timones internos, AspiradO3
+static void configure_motor_continuo(gpio_num_t pin)
+{
+    ESP_LOGI(TAG, "Configurando un pin para un motor");
+    gpio_reset_pin(pin);
+    /* Set the pin as a push/pull output */
+    gpio_set_direction(pin, GPIO_MODE_OUTPUT);
+}
+
+static void configure_motor_continuo_doble(gpio_num_t pin1, gpio_num_t pin2)
+{
+    ESP_LOGI(TAG, "Configurando dos pines para un motor DC de 2 sentidos");
+    configure_motor_continuo(pin1);
+    configure_motor_continuo(pin2);
+    ESP_LOGI(TAG, "Configuración de motor de 2 pines completa");
+
+}
 
 // Switch, se usará para encender o apagar el LCD
 static void configure_switch(void)
@@ -1518,9 +1600,12 @@ void app_main(void)
     gettimeofday(&now, NULL);
     int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
     /*
-     * Configurar periféricos, LED, switch y los inputs analógicos
+     * Configurar periféricos, LED, motores, switch y los inputs analógicos
      */
     configure_led();
+    configure_motor_continuo(PIN_ASPIRADOR);
+    configure_motor_continuo_doble(PIN_TIMON_INTERNO_A, PIN_TIMON_INTERNO_R);
+    configure_motor_continuo_doble(PIN_TIMON_EXTERNO_A, PIN_TIMON_EXTERNO_R);
     configure_switch();
     configure_analog();
 
@@ -1626,6 +1711,11 @@ void app_main(void)
 
     // Task HTTP2 para Telegram
     xTaskCreate(&http2_task, "http2_task", (1024 * 32), NULL, 5, NULL);
+
+    // TEST MOTOR ASPIRADOR TO-DO TO VERIFY
+    s_aspirador_state = true;
+    blink_motorAspirador();
+    // TO-DO TESTS DE LOS OTROS DOS MOTORES
 
     // Task mqtt? TO-DO?
     //  xTaskCreate(mqtt_app_start, "mqtt_send_data_0", 1024 * 2, (void *)0, 10, NULL);

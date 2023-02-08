@@ -1,8 +1,8 @@
 {
     "project_name":       "bootloader",
     "project_path":       "C:/Espressif/frameworks/esp-idf-v4.4.2/components/bootloader/subproject",
-    "build_dir":          "C:/ASL/Universidad/4to_curso/SBC/TestGithub/SBC_22_M_01/simple/build/bootloader",
-    "config_file":        "C:/ASL/Universidad/4to_curso/SBC/TestGithub/SBC_22_M_01/simple/sdkconfig",
+    "build_dir":          "C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/simple/build/bootloader",
+    "config_file":        "C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/simple/sdkconfig",
     "config_defaults":    "",
     "app_elf":            "bootloader.elf",
     "app_bin":            "bootloader.bin",

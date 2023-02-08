@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("C:/ASL/Universidad/4to_curso/SBC/TestGithub/SBC_22_M_01/simple/build/esp-idf/newlib/port/cmake_install.cmake")
+  include("C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/simple/build/esp-idf/newlib/port/cmake_install.cmake")
 
 endif()
 

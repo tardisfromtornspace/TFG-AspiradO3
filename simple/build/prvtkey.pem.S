@@ -1,4 +1,4 @@
-/* * Data converted from C:/ASL/Universidad/4to_curso/SBC/TestGithub/SBC_22_M_01/simple/main/certs/prvtkey.pem
+/* * Data converted from C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/simple/main/certs/prvtkey.pem
  * (null byte appended)
  */
 .data

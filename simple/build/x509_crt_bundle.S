@@ -1,4 +1,4 @@
-/* * Data converted from C:/ASL/Universidad/4to_curso/SBC/TestGithub/SBC_22_M_01/simple/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/simple/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 .section .rodata.embedded
