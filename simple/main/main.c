@@ -65,6 +65,12 @@
 // Para i2c test
 // #include "cmd_i2ctools.h"
 
+// Para SPI TO-DO comprobar?
+#include "driver/spi_master.h"
+
+// Para GPS
+// TO-DO usar el código de uart nmea_example?
+
 // Para mensajes genéricos
 #include <string.h>
 
@@ -108,7 +114,14 @@ static const char *TAG = "ServidorSimple";
 
 /* Sensores ozono */
 // WIP
-
+// Uso SPI?
+/*
+#define PIN_NUM_MISO 25
+#define PIN_NUM_MOSI 23
+#define PIN_NUM_CLK  19
+#define PIN_NUM_CS   22
+*/
+// TO-DO prueba con adc primero
 
 /* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
@@ -158,15 +171,19 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 #if CONFIG_IDF_TARGET_ESP32
 #define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_6
 #define ADC2_EXAMPLE_CHAN0 ADC1_CHANNEL_4 // Usamos Wifi, no podemos usar el ADC2
-static const char *TAG_CH[2][10] = {{"ADC1_CH6"}, {"ADC2_CH0"}};
+#define ADC3_EXAMPLE_CHAN0 ADC1_CHANNEL_5 // Usamos Wifi, no podemos usar el ADC2
+static const char *TAG_CH[3][10] = {{"ADC1_CH6"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
 #else
+// TO-DO ver compatibilidad
 #define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_2
 #define ADC2_EXAMPLE_CHAN0 ADC2_CHANNEL_0
-static const char *TAG_CH[2][10] = {{"ADC1_CH2"}, {"ADC2_CH0"}};
+#define ADC3_EXAMPLE_CHAN0 ADC2_CHANNEL_1
+static const char *TAG_CH[3][10] = {{"ADC1_CH2"}, {"ADC2_CH0"}, {"ADC2_CH1"}};
 #endif
 
 #define PIN_ANALOG 34
 #define PIN_ANALOG2 32
+#define PIN_ANALOG3 33
 
 // ADC Attenuation
 #define ADC_EXAMPLE_ATTEN ADC_ATTEN_DB_11
@@ -236,10 +253,11 @@ int datoI2CFotonlegible = 0; // Concentración de químicos en el algua filtrada
 
 // ADC
 
-static int adc_raw[2][10];
+static int adc_raw[3][10];
 
 static esp_adc_cal_characteristics_t adc1_chars;
 static esp_adc_cal_characteristics_t adc2_chars;
+static esp_adc_cal_characteristics_t adc3_chars; // TO-DO comprobar?
 
 // I2C CO2
 
@@ -850,6 +868,7 @@ static bool adc_calibration_init(void)
     {
         cali_enable = true;
         esp_adc_cal_characterize(ADC_UNIT_1, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc1_chars);
+        // TO-DO si usamos un solo módul oadc no deberíamos comentar esto?
         esp_adc_cal_characterize(ADC_UNIT_2, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc2_chars);
     }
     else
@@ -1647,7 +1666,119 @@ void app_main(void)
     ESP_ERROR_CHECK(adc1_config_channel_atten(ADC1_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
 
     // ADC2 config
+    //original ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+    // TO-DO ver si con adc1_config_... va mejor
+#if CONFIG_IDF_TARGET_ESP32     
+    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+    // ADC3 config
+    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+#else
     ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+    // ADC3 config
+    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+#endif
+
+/* COMENTADO TO-DO Sensores Mikroe SPI? Ajustar al sensor
+esp_err_t ret;
+    spi_device_handle_t spi;
+    spi_bus_config_t buscfg={
+        .miso_io_num=PIN_NUM_MISO,
+        .mosi_io_num=PIN_NUM_MOSI,
+        .sclk_io_num=PIN_NUM_CLK,
+        .quadwp_io_num=-1,
+        .quadhd_io_num=-1,
+        .max_transfer_sz=PARALLEL_LINES*320*2+8
+    };
+    spi_device_interface_config_t devcfg={
+#ifdef CONFIG_LCD_OVERCLOCK
+        .clock_speed_hz=26*1000*1000,           //Clock out at 26 MHz
+#else
+        .clock_speed_hz=10*1000*1000,           //Clock out at 10 MHz
+#endif
+        .mode=0,                                //SPI mode 0
+        .spics_io_num=PIN_NUM_CS,               //CS pin
+        .queue_size=7,                          //We want to be able to queue 7 transactions at a time
+        .pre_cb=lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
+    };
+    //Initialize the SPI bus
+    ret=spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    ESP_ERROR_CHECK(ret);
+    //Attach the LCD to the SPI bus
+    ret=spi_bus_add_device(LCD_HOST, &devcfg, &spi);
+    ESP_ERROR_CHECK(ret);
+    //Initialize the LCD
+    lcd_init(spi);
+
+    // CÓDIGO COMENTADO 2 SLAVE??? TO-DO AJUSTAR SI LO DE ARRIBA SE INCLUYE
+    //Configuration for the SPI bus
+    spi_bus_config_t buscfg={
+        .mosi_io_num=GPIO_MOSI,
+        .miso_io_num=GPIO_MISO,
+        .sclk_io_num=GPIO_SCLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+    };
+
+    //Configuration for the SPI slave interface
+    spi_slave_interface_config_t slvcfg={
+        .mode=0,
+        .spics_io_num=GPIO_CS,
+        .queue_size=3,
+        .flags=0,
+        .post_setup_cb=my_post_setup_cb,
+        .post_trans_cb=my_post_trans_cb
+    };
+
+    //Configuration for the handshake line
+    gpio_config_t io_conf={
+        .intr_type=GPIO_INTR_DISABLE,
+        .mode=GPIO_MODE_OUTPUT,
+        .pin_bit_mask=(1<<GPIO_HANDSHAKE)
+    };
+
+    //Configure handshake line as output
+    gpio_config(&io_conf);
+    //Enable pull-ups on SPI lines so we don't detect rogue pulses when no master is connected.
+    gpio_set_pull_mode(GPIO_MOSI, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(GPIO_SCLK, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(GPIO_CS, GPIO_PULLUP_ONLY);
+
+    //Initialize SPI slave interface
+    ret=spi_slave_initialize(RCV_HOST, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
+    assert(ret==ESP_OK);
+
+    WORD_ALIGNED_ATTR char sendbuf[129]="";
+    WORD_ALIGNED_ATTR char recvbuf[129]="";
+    memset(recvbuf, 0, 33);
+    spi_slave_transaction_t t;
+    memset(&t, 0, sizeof(t));
+
+    while(1) {
+        //Clear receive buffer, set send buffer to something sane
+        memset(recvbuf, 0xA5, 129);
+        sprintf(sendbuf, "This is the receiver, sending data for transmission number %04d.", n);
+
+        //Set up a transaction of 128 bytes to send/receive
+        t.length=128*8;
+        t.tx_buffer=sendbuf;
+        t.rx_buffer=recvbuf;
+        // This call enables the SPI slave interface to send/receive to the sendbuf and recvbuf. The transaction is
+        initialized by the SPI master, however, so it will not actually happen until the master starts a hardware transaction
+        by pulling CS low and pulsing the clock etc. In this specific example, we use the handshake line, pulled up by the
+        .post_setup_cb callback that is called as soon as a transaction is ready, to let the master know it is free to transfer
+        data.
+        //
+        ret=spi_slave_transmit(RCV_HOST, &t, portMAX_DELAY);
+
+        //spi_slave_transmit does not return until the master has done a transmission, so by here we have sent our data and
+        //received data from the master. Print it.
+        printf("Received: %s\n", recvbuf);
+        n++;
+    }
+
+
+*/
+
 
     /*
      * Informacion del chip
@@ -1785,7 +1916,7 @@ void app_main(void)
         if (cali_enable)
         {
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[0][0], &adc1_chars);
-            voltajeHidro = voltage;
+            ozonoBabor = voltage;
             ESP_LOGI(TAG_CH[0][0], "cali data: %d mV", voltage);
         }
 
@@ -1808,9 +1939,30 @@ void app_main(void)
 #else
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[1][0], &adc2_chars);
 #endif
-            voltajeSolar = voltage;
+            ozonoEstribor = voltage;
             ESP_LOGI(TAG_CH[1][0], "cali data: %d mV", voltage);
         }
+// TO-DO verificar que funcione con Mikroe, si no , pasa a bus SPI
+#if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
+        adc_raw[2][0] = adc1_get_raw(ADC3_EXAMPLE_CHAN0);
+#else
+        do
+        {
+            ret = adc2_get_raw(ADC3_EXAMPLE_CHAN0, ADC_WIDTH_BIT_DEFAULT, &adc_raw[2][0]);
+        } while (ret == ESP_ERR_INVALID_STATE);
+        ESP_ERROR_CHECK(ret);
+#endif
+        ESP_LOGI(TAG_CH[2][0], "raw  data: %d", adc_raw[2][0]);
+        if (cali_enable)
+        {
+#if CONFIG_IDF_TARGET_ESP32
+            voltage = esp_adc_cal_raw_to_voltage(adc_raw[2][0], &adc1_chars);
+#else
+            voltage = esp_adc_cal_raw_to_voltage(adc_raw[2][0], &adc2_chars);
+#endif
+            ozonoTrasFiltro = voltage;
+            ESP_LOGI(TAG_CH[2][0], "cali data: %d mV", voltage);
+        } // TO-DO ajustar lecturas para obtener factor de ozono
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
 
