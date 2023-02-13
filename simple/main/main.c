@@ -65,7 +65,8 @@
 // Para i2c test
 // #include "cmd_i2ctools.h"
 
-// Para SPI TO-DO comprobar?
+// Para SPI TO-DO comprobar? TO-DO USAR I2C SI NO NOS VIENE EL DE MIKROE
+// https://es.rs-online.com/web/p/circuitos-integrados-de-sensores-ambientales/2395623
 #include "driver/spi_master.h"
 
 // Para GPS
@@ -149,6 +150,11 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 
 #define CO2_SENSOR_ADDR 0x5A /*!< Slave address of the CO2 sensor is 0x5A, when we add an additional binary 1 behind it transforms into 0xB5 */
 #define CO2_REG_ADDR 0x5A    /*!< Register addresses of the CO2 lecture register */
+
+// TO-DO hacer algo para elegir 3 sensores diferentes (p.ej usar 3 pines diferentes del ESP-32 que estén conectados con un AND al SDA: SDA ESP y uno de los pines ==D--- SDA modulo)
+#define O3_SENSOR_ADDR 0x33 
+// TO-DO si utilizamos el sensor https://es.rs-online.com/web/p/circuitos-integrados-de-sensores-ambientales/2395623 en vez del de Mikroe tenemos la traba de que sus registros I2C no son públicos y requerimos de un NDA TO-DO
+#define O3_SENSOR_REGISTER 0x33
 
 #define TEMPHUM_SENSOR_ADDR 0x44 /*Dir sensor tempHum*/
 #define COMANDO_TEMPHUM_MSB 0x24
@@ -480,6 +486,126 @@ static esp_err_t CO2_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t 
     return ESP_OK;
 }
 
+// SENSOR DE O3 NO DE MIKROE TO-DO
+static esp_err_t O3_ZMOD4510_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len, int num)
+{
+
+    uint8_t dato[6] = {1, 2, 3, 4, 5, 6}; // TO-DO en teoría 1 pero no nos dicen más en el datasheet
+
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    // Primero hacemos que el sensor nos lea el comando
+    ESP_ERROR_CHECK(i2c_master_start(cmd));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd));
+
+    esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+
+    i2c_cmd_link_delete(cmd);
+    if (retA == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Logre llamar al sensor i2c o3 renesas y darle un comando");
+    }
+    else if (retA == ESP_ERR_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "Bus is busy");
+    }
+    else if (retA == ESP_ERR_INVALID_ARG)
+    {
+        ESP_LOGW(TAG, "Parameter error");
+    }
+    else if (retA == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
+    }
+    else if (retA == ESP_FAIL)
+    {
+        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+    }
+    else
+    {
+        ESP_LOGW(TAG, "Read failed");
+    }
+    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+
+    i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
+    ESP_ERROR_CHECK(i2c_master_start(cmd3));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, (slave_addr << 1) | READ_BIT, ACK_VAL));
+    int i = 0;
+    for (i = 0; i < len - 1; i++)
+    {
+        ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[i], ACK_VAL));
+    }
+    ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[len - 1], NACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd3));
+
+    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd3, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+
+    i2c_cmd_link_delete(cmd3);
+    if (ret == ESP_OK)
+    {
+        ESP_LOGW(TAG, "Recibi dato ozono");
+        for (int i = 0; i < len; i++)
+        {
+            printf("0x%02x ", dato[i]);
+            if ((i + 1) % 16 == 0)
+            {
+                printf("\r\n");
+            }
+        }
+        if (len % 16)
+        {
+            printf("\r\n");
+        }
+    }
+    else if (ret == ESP_ERR_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "Bus is busy");
+    }
+    else if (ret == ESP_ERR_INVALID_ARG)
+    {
+        ESP_LOGW(TAG, "Parameter error");
+    }
+    else if (ret == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
+    }
+    else if (ret == ESP_FAIL)
+    {
+        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+    }
+    else
+    {
+        ESP_LOGW(TAG, "Read failed");
+    }
+    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
+
+    esp_log_buffer_hex(TAG, dato, len);
+    int datoozono = dato[3] * 256 + dato[4]; // Este sensor manda primero el MSB y luego el LSB
+    switch (num)
+    {
+    case 0:
+        ESP_LOGI(TAG, "Leo ozono babor");
+        ozonoBabor = datoozono;
+        break;
+    case 1:
+        ESP_LOGI(TAG, "Leo ozono estribor");
+        ozonoEstribor = datoozono;
+        break;
+    case 2:
+        ESP_LOGI(TAG, "Leo ozono tras filtros");
+        ozonoTrasFiltro = datoozono;
+        break;
+    default:
+        ESP_LOGI(TAG, "Valor extranio, supongo ozono tras filtros");
+        ozonoTrasFiltro = datoozono;
+        break;
+    }
+    ESP_LOGI(TAG, "Lectura de ozono Renesas me sale %X", datoozono);
+    return ESP_OK;
+}
+
 static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, uint8_t reg_addrLSB, size_t len)
 {
 
@@ -576,7 +702,7 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
     esp_log_buffer_hex(TAG, dato, len);
-    datoI2CCO2legible = dato[3] * 256 + dato[4]; // Este sensor manda primero el MSB y luego el LSB
+    datoI2CCO2legible = dato[3] * 256 + dato[4]; // Este sensor manda primero el MSB y luego el LSB TO-DO no confirmado
     ESP_LOGI(TAG, "Lectura de humedad me sale %X", datoI2CCO2legible);
     return ESP_OK;
 }
