@@ -26,6 +26,8 @@
     "esp_log.h": "c",
     "adc.h": "c",
     "rtc.h": "c",
-    "ulp.h": "c"
+    "ulp.h": "c",
+    "cmath": "c",
+    "complex": "c"
   }
 }

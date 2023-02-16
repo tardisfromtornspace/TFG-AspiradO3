@@ -74,6 +74,7 @@
 
 // Para mensajes genéricos
 #include <string.h>
+#include <math.h>
 
 // Para Telegram
 #include <stdlib.h>
@@ -123,6 +124,13 @@ static const char *TAG = "ServidorSimple";
 #define PIN_NUM_CS   22
 */
 // TO-DO prueba con adc primero
+/* COSAS MATEMÁTICAS Y DE COMPONENTE MISCELÁNEO*/
+#define E 2.718281828459
+#define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
+#define RESL 10100 // Va de 100 a 10100 ohmios
+#define VOLTREF 5 // Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref
+
+/* GPS */
 
 /* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
@@ -154,7 +162,7 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 // TO-DO hacer algo para elegir 3 sensores diferentes (p.ej usar 3 pines diferentes del ESP-32 que estén conectados con un AND al SDA: SDA ESP y uno de los pines ==D--- SDA modulo)
 #define O3_SENSOR_ADDR 0x33 
 // TO-DO si utilizamos el sensor https://es.rs-online.com/web/p/circuitos-integrados-de-sensores-ambientales/2395623 en vez del de Mikroe tenemos la traba de que sus registros I2C no son públicos y requerimos de un NDA TO-DO
-#define O3_SENSOR_REGISTER 0x33
+#define O3_SENSOR_REGISTER 0x97
 
 #define TEMPHUM_SENSOR_ADDR 0x44 /*Dir sensor tempHum*/
 #define COMANDO_TEMPHUM_MSB 0x24
@@ -176,15 +184,17 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 // ADC Channels
 #if CONFIG_IDF_TARGET_ESP32
 #define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_6
-#define ADC2_EXAMPLE_CHAN0 ADC1_CHANNEL_4 // Usamos Wifi, no podemos usar el ADC2
-#define ADC3_EXAMPLE_CHAN0 ADC1_CHANNEL_5 // Usamos Wifi, no podemos usar el ADC2
-static const char *TAG_CH[3][10] = {{"ADC1_CH6"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
+#define ADC2_EXAMPLE_CHAN0 ADC1_CHANNEL_7 // Usamos Wifi, no podemos usar el ADC2
+#define ADC3_EXAMPLE_CHAN0 ADC1_CHANNEL_4
+#define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
+static const char *TAG_CH[4][10] = {{"ADC1_CH6"}, {"ADC2_CH7"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
 #else
 // TO-DO ver compatibilidad
 #define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_2
 #define ADC2_EXAMPLE_CHAN0 ADC2_CHANNEL_0
 #define ADC3_EXAMPLE_CHAN0 ADC2_CHANNEL_1
-static const char *TAG_CH[3][10] = {{"ADC1_CH2"}, {"ADC2_CH0"}, {"ADC2_CH1"}};
+#define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_3
+static const char *TAG_CH[4][10] = {{"ADC1_CH6"}, {"ADC2_CH7"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
 #endif
 
 #define PIN_ANALOG 34
@@ -240,8 +250,8 @@ static uint8_t s_led_state = 0; // Estado del led
 static uint8_t s_switch_state = 0; // Estado del switch TO-DO borrar en final
 
 static uint8_t s_aspirador_state = 0; // Estado del aspirador 0 - apagado, 1 - encendido
-int estadoTimonInterno = 0; // Estado del timon interno, 0 - inicial o desconocido, 1 - posición levantada, 2 - posición bajada
-int estadoTimonExterno = 0; // Estado del timon externo, 0 - inicial o centrado, 1 - babor, 2 - estribor
+int estadoTimonInterno = 1; // Estado del timon interno, 0 - posición levantada, 1- inicial o desconocido, 2 - posición bajada
+int estadoTimonExterno = 1; // Estado del timon externo, 0 -babor, 1 - inicial o centrado, 2 - estribor
 
 int s_reset_state = 0; // tiempo hasta resetear. 0 es que no se resetea
 
@@ -253,17 +263,22 @@ int ozonoBabor = 0; // Ozono detectado por el sensor de babor
 int ozonoEstribor = 0; // Ozono detectado por el sensor de estribor
 int ozonoTrasFiltro = 0; // Ozono detectado tras el filtro activo de carbono
 
-int datoI2CCO2legible = 0; // Concentracion de quimicos en el agua, usamos el sensor de CO2 como mock
+int datoI2CCO2legible = 0; // Concentracion de quimicos en el agua, usamos el sensor de CO2 como mock TO-DO BORRAR
+int temperaturaAtmos = 0; // Temperatura atmosferica en grados centigrados.
+int humedadAtmos = 0; // Humedad relativa en %. Va de 0 a 100
 
-int datoI2CFotonlegible = 0; // Concentración de químicos en el algua filtrada, usamos el sensor de luz como mock
+int gps = 0; // TO-DO ES UN STUB CORRIGE
+
+int datoI2CFotonlegible = 0; // Concentración de químicos en el algua filtrada, usamos el sensor de luz como mock TO-DO BORRAR
 
 // ADC
 
-static int adc_raw[3][10];
+static int adc_raw[4][10];
 
 static esp_adc_cal_characteristics_t adc1_chars;
 static esp_adc_cal_characteristics_t adc2_chars;
 static esp_adc_cal_characteristics_t adc3_chars; // TO-DO comprobar?
+static esp_adc_cal_characteristics_t adc4_chars; // TO-DO comprobar?
 
 // I2C CO2
 
@@ -336,13 +351,13 @@ static void blink_motorTimon(gpio_num_t pin1, gpio_num_t pin2, int estado_grupo)
     switch (estado_grupo)
     {
     case 0:
-        ESP_LOGI(TAG, "FRENTE");
-        sentido = false;
+        ESP_LOGI(TAG, "BABOR");
+        sentido = true;
         sentido2 = false;
         break;
     case 1:
-        ESP_LOGI(TAG, "BABOR");
-        sentido = true;
+        ESP_LOGI(TAG, "FRENTE");
+        sentido = false;
         sentido2 = false;
         break;
     case 2:
@@ -485,19 +500,39 @@ static esp_err_t CO2_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t 
     ESP_LOGI(TAG, "El CO2 me sale %X", datoI2CCO2legible);
     return ESP_OK;
 }
+// TO-DO funcion cálculos corrección ozono
+/**
+ * ajustarValoresOzono
+ * Esta función toma la lectura de ozono y la corrige utilizando la fórmula del divisor de tensión
+ * 1º Obtiene la resistencia dada por el valor de lectura obtenido
+ * 2º Tomando humedad y temperatura, ajusta la resistencia
+ * 3º Recalcula de nuevo empleando el divisor de tensión
+ * 4º Ajusta valores a la curva del datasheet de voltajes
+ * 
+ * returns int
+ * 
+*/
+static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura){
+    double resistencia = RESL * VOLTREF / (double) lecturaInicial - RESL;
+    double resistenciaAjustada = resistencia / (1 - 0.013 * temperatura -  (humedad - 55) / 30 * (0.175 + 0.2 - (20 - 20 * temperatura)));
+    double correccionLectura = RESLDATASHEET * VOLTREF / (RESLDATASHEET + resistenciaAjustada);
+    return (int) 100 * (pow(E, correccionLectura) -1);
+}
 
-// SENSOR DE O3 NO DE MIKROE TO-DO
+// SENSOR DE O3 NO DE MIKROE TO-DO TO-DO HACER FUNCION INIT DEL SENSOR RENESAS SI ES NECESARIO
 static esp_err_t O3_ZMOD4510_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len, int num)
 {
 
-    uint8_t dato[6] = {1, 2, 3, 4, 5, 6}; // TO-DO en teoría 1 pero no nos dicen más en el datasheet
+    uint8_t dato[18] = {1, 2, 3, 4, 5, 6, 7, 8, 9 , 10, 11, 12, 13, 14, 15, 16, 17, 18}; // TO-DO en teoría 1 pero no nos dicen más en el datasheet
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     // Primero hacemos que el sensor nos lea el comando
     ESP_ERROR_CHECK(i2c_master_start(cmd));
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_stop(cmd));
+
+    // According to the datasheet, no stop condition
+    //ESP_ERROR_CHECK(i2c_master_stop(cmd));
 
     esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
     vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
@@ -505,7 +540,7 @@ static esp_err_t O3_ZMOD4510_register_read(uint8_t slave_addr, uint8_t reg_addr,
     i2c_cmd_link_delete(cmd);
     if (retA == ESP_OK)
     {
-        ESP_LOGI(TAG, "Logre llamar al sensor i2c o3 renesas y darle un comando");
+        ESP_LOGI(TAG, "Logre llamar al sensor i2c O3 renesas y darle un comando");
     }
     else if (retA == ESP_ERR_TIMEOUT)
     {
@@ -609,7 +644,7 @@ static esp_err_t O3_ZMOD4510_register_read(uint8_t slave_addr, uint8_t reg_addr,
 static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, uint8_t reg_addrLSB, size_t len)
 {
 
-    uint8_t dato[6] = {1, 2, 3, 4, 5, 6}; // El primero y segundo son temepratura, el 4 y 5 humedad. el 3 y 6 son checksum
+    uint8_t dato[6] = {1, 2, 3, 4, 5, 6}; // El primero y segundo son temperatura, el 4 y 5 humedad. el 3 y 6 son checksum
 
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     // Primero hacemos que el sensor nos lea el comando
@@ -702,8 +737,10 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
     esp_log_buffer_hex(TAG, dato, len);
-    datoI2CCO2legible = dato[3] * 256 + dato[4]; // Este sensor manda primero el MSB y luego el LSB TO-DO no confirmado
-    ESP_LOGI(TAG, "Lectura de humedad me sale %X", datoI2CCO2legible);
+    temperaturaAtmos = -45 + (int) 175 * (dato[0] * 256 + dato[1])/((double) 65536-1); // Este sensor manda primero el MSB y luego el LSB, y eso se debe convertir a las unidades
+    humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
+
+    ESP_LOGI(TAG, "Lectura de humedad me sale %X y temperatura %X", humedadAtmos, temperaturaAtmos);
     return ESP_OK;
 }
 
@@ -961,11 +998,23 @@ static void mqtt_app_start(void)
 {
     // Crear json que se quiere enviar al ThingsBoard
     cJSON *root = cJSON_CreateObject();
+    /*
     cJSON_AddNumberToObject(root, "energiaSolar", voltajeSolar);      // En la telemetría de Thingsboard aparecerá
     cJSON_AddNumberToObject(root, "energiaHidraulica", voltajeHidro); // En la telemetría de Thingsboard aparecerá
     cJSON_AddNumberToObject(root, "co2I2C", datoI2CCO2legible);       // En la telemetría de Thingsboard aparecerá lo sacado del I2C
     cJSON_AddNumberToObject(root, "luzI2C", datoI2CFotonlegible);     // En la telemetría de Thingsboard aparecerá lo sacado del I2C
     cJSON_AddNumberToObject(root, "botonDisplay", s_switch_state);    // En la telemetría de Thingsboard aparecerá como valor true/false
+    */
+    cJSON_AddNumberToObject(root, "ozonoBabor", ozonoBabor);                       // En p.p.m.
+    cJSON_AddNumberToObject(root, "ozonoEstribor", ozonoEstribor);
+    cJSON_AddNumberToObject(root, "ozonoTrasFiltro", ozonoTrasFiltro);
+    cJSON_AddNumberToObject(root, "posicionDelTimonExterno", estadoTimonExterno);  // Con los valores asignados
+    cJSON_AddNumberToObject(root, "posicionDelTimonInterno", estadoTimonInterno);
+    cJSON_AddNumberToObject(root, "tempAtmos", temperaturaAtmos);                  // En grados Celsius
+    cJSON_AddNumberToObject(root, "humedadRel", humedadAtmos);                     // En %
+    cJSON_AddNumberToObject(root, "energiaSolar", voltajeSolar);                   // En voltios
+    cJSON_AddNumberToObject(root, "posicionGNSS", estadoTimonInterno);
+
     char *post_data = cJSON_PrintUnformatted(root);
     // Enviar los datos
     esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
@@ -1798,112 +1847,12 @@ void app_main(void)
     ESP_ERROR_CHECK(adc1_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
     // ADC3 config
     ESP_ERROR_CHECK(adc1_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
 #else
     ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-    // ADC3 config
+    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
     ESP_ERROR_CHECK(adc2_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
 #endif
-
-/* COMENTADO TO-DO Sensores Mikroe SPI? Ajustar al sensor
-esp_err_t ret;
-    spi_device_handle_t spi;
-    spi_bus_config_t buscfg={
-        .miso_io_num=PIN_NUM_MISO,
-        .mosi_io_num=PIN_NUM_MOSI,
-        .sclk_io_num=PIN_NUM_CLK,
-        .quadwp_io_num=-1,
-        .quadhd_io_num=-1,
-        .max_transfer_sz=PARALLEL_LINES*320*2+8
-    };
-    spi_device_interface_config_t devcfg={
-#ifdef CONFIG_LCD_OVERCLOCK
-        .clock_speed_hz=26*1000*1000,           //Clock out at 26 MHz
-#else
-        .clock_speed_hz=10*1000*1000,           //Clock out at 10 MHz
-#endif
-        .mode=0,                                //SPI mode 0
-        .spics_io_num=PIN_NUM_CS,               //CS pin
-        .queue_size=7,                          //We want to be able to queue 7 transactions at a time
-        .pre_cb=lcd_spi_pre_transfer_callback,  //Specify pre-transfer callback to handle D/C line
-    };
-    //Initialize the SPI bus
-    ret=spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_ERROR_CHECK(ret);
-    //Attach the LCD to the SPI bus
-    ret=spi_bus_add_device(LCD_HOST, &devcfg, &spi);
-    ESP_ERROR_CHECK(ret);
-    //Initialize the LCD
-    lcd_init(spi);
-
-    // CÓDIGO COMENTADO 2 SLAVE??? TO-DO AJUSTAR SI LO DE ARRIBA SE INCLUYE
-    //Configuration for the SPI bus
-    spi_bus_config_t buscfg={
-        .mosi_io_num=GPIO_MOSI,
-        .miso_io_num=GPIO_MISO,
-        .sclk_io_num=GPIO_SCLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-    };
-
-    //Configuration for the SPI slave interface
-    spi_slave_interface_config_t slvcfg={
-        .mode=0,
-        .spics_io_num=GPIO_CS,
-        .queue_size=3,
-        .flags=0,
-        .post_setup_cb=my_post_setup_cb,
-        .post_trans_cb=my_post_trans_cb
-    };
-
-    //Configuration for the handshake line
-    gpio_config_t io_conf={
-        .intr_type=GPIO_INTR_DISABLE,
-        .mode=GPIO_MODE_OUTPUT,
-        .pin_bit_mask=(1<<GPIO_HANDSHAKE)
-    };
-
-    //Configure handshake line as output
-    gpio_config(&io_conf);
-    //Enable pull-ups on SPI lines so we don't detect rogue pulses when no master is connected.
-    gpio_set_pull_mode(GPIO_MOSI, GPIO_PULLUP_ONLY);
-    gpio_set_pull_mode(GPIO_SCLK, GPIO_PULLUP_ONLY);
-    gpio_set_pull_mode(GPIO_CS, GPIO_PULLUP_ONLY);
-
-    //Initialize SPI slave interface
-    ret=spi_slave_initialize(RCV_HOST, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
-    assert(ret==ESP_OK);
-
-    WORD_ALIGNED_ATTR char sendbuf[129]="";
-    WORD_ALIGNED_ATTR char recvbuf[129]="";
-    memset(recvbuf, 0, 33);
-    spi_slave_transaction_t t;
-    memset(&t, 0, sizeof(t));
-
-    while(1) {
-        //Clear receive buffer, set send buffer to something sane
-        memset(recvbuf, 0xA5, 129);
-        sprintf(sendbuf, "This is the receiver, sending data for transmission number %04d.", n);
-
-        //Set up a transaction of 128 bytes to send/receive
-        t.length=128*8;
-        t.tx_buffer=sendbuf;
-        t.rx_buffer=recvbuf;
-        // This call enables the SPI slave interface to send/receive to the sendbuf and recvbuf. The transaction is
-        initialized by the SPI master, however, so it will not actually happen until the master starts a hardware transaction
-        by pulling CS low and pulsing the clock etc. In this specific example, we use the handshake line, pulled up by the
-        .post_setup_cb callback that is called as soon as a transaction is ready, to let the master know it is free to transfer
-        data.
-        //
-        ret=spi_slave_transmit(RCV_HOST, &t, portMAX_DELAY);
-
-        //spi_slave_transmit does not return until the master has done a transmission, so by here we have sent our data and
-        //received data from the master. Print it.
-        printf("Received: %s\n", recvbuf);
-        n++;
-    }
-
-
-*/
 
 
     /*
@@ -1974,6 +1923,7 @@ esp_err_t ret;
     blink_motorAspirador();
     // TO-DO TESTS DE LOS OTROS DOS MOTORES
 
+
     // Task mqtt? TO-DO?
     //  xTaskCreate(mqtt_app_start, "mqtt_send_data_0", 1024 * 2, (void *)0, 10, NULL);
 
@@ -1986,14 +1936,14 @@ esp_err_t ret;
     while (1)
     {
 
-        if (gpio_get_level(PIN_SWITCH))
+        if (gpio_get_level(PIN_SWITCH)) // TO-DO AJUSTAR? 
         {
             ESP_LOGI(TAG, "Switch display: ON");
             s_switch_state = true;
             ssd1306_contrast(&dev, 0xff);
-            sprintf(primeralineChar, " Tox pre: %02d", datoI2CCO2legible);
-            sprintf(segundalineChar, " Tox pos: %02d", datoI2CFotonlegible);
-            sprintf(terceralineChar, " V Hidro: %02d", voltajeHidro);
+            sprintf(primeralineChar, " O3 bab: %02d", ozonoBabor);
+            sprintf(segundalineChar, " O3 est: %02d", ozonoEstribor);
+            sprintf(terceralineChar, " O3 tra: %02d", ozonoTrasFiltro);
             sprintf(cuartalineChar, " V Solar: %02d", voltajeSolar);
             ssd1306_display_text(&dev, 0, primeralineChar, 32, false);
             ssd1306_display_text(&dev, 1, segundalineChar, 32, false);
@@ -2033,7 +1983,7 @@ esp_err_t ret;
             }
         }
 
-        /*ADC Part*/
+        /* FASE 1: LECTURA ADC DE SENSORES MIKROE */
 
         ESP_LOGI(TAG, "Procedo a medir ADC");
         adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
@@ -2068,6 +2018,9 @@ esp_err_t ret;
             ozonoEstribor = voltage;
             ESP_LOGI(TAG_CH[1][0], "cali data: %d mV", voltage);
         }
+
+        vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
+
 // TO-DO verificar que funcione con Mikroe, si no , pasa a bus SPI
 #if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
         adc_raw[2][0] = adc1_get_raw(ADC3_EXAMPLE_CHAN0);
@@ -2088,20 +2041,66 @@ esp_err_t ret;
 #endif
             ozonoTrasFiltro = voltage;
             ESP_LOGI(TAG_CH[2][0], "cali data: %d mV", voltage);
-        } // TO-DO ajustar lecturas para obtener factor de ozono
+        }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
 
-        /* Read the register, on power up the register should have the value 0xB5 */
-        // ESP_LOGI(TAG, "Procedo a leer I2C de CO2"); // Se reemplazó por el sensor TempHum
-        // ESP_ERROR_CHECK(register_read(CO2_SENSOR_ADDR, CO2_REG_ADDR, 9));
+#if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
+        adc_raw[3][0] = adc1_get_raw(ADC3_EXAMPLE_CHAN0);
+#else
+        do
+        {
+            ret = adc2_get_raw(ADC4_EXAMPLE_CHAN0, ADC_WIDTH_BIT_DEFAULT, &adc_raw[3][0]);
+        } while (ret == ESP_ERR_INVALID_STATE);
+        ESP_ERROR_CHECK(ret);
+#endif
+        ESP_LOGI(TAG_CH[3][0], "raw  data: %d", adc_raw[3][0]);
+        if (cali_enable)
+        {
+#if CONFIG_IDF_TARGET_ESP32
+            voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc1_chars);
+#else
+            voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc2_chars);
+#endif
+            voltajeSolar = voltage;
+            ESP_LOGI(TAG_CH[3][0], "cali data: %d mV", voltage);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
+
+        /* FASE 2: LECTURA SE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
         ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
-        ESP_LOGI(TAG, "Procedo a leer I2C de Luminosidad");
-        ESP_ERROR_CHECK(register_read_commando(LUZ_SENSOR_ADDR, LUZ_REG_ADDR, 2));
+
+        // TO-DO BORRAR?
+        //ESP_LOGI(TAG, "Procedo a leer I2C de Luminosidad");
+        //ESP_ERROR_CHECK(register_read_commando(LUZ_SENSOR_ADDR, LUZ_REG_ADDR, 2));
 
         vTaskDelay(pdMS_TO_TICKS(1000)); // El I2C puede tardar hasta 11 segundos
 
+        /* FASE 3: JUSTE DE LECTURAS DE OZONO */
+        ozonoBabor = ajustarValoresOzono(ozonoBabor, humedadAtmos, temperaturaAtmos);
+        ozonoEstribor = ajustarValoresOzono(ozonoEstribor, humedadAtmos, temperaturaAtmos);
+        ozonoTrasFiltro = ajustarValoresOzono(ozonoTrasFiltro, humedadAtmos, temperaturaAtmos);
+
+        /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
+        /*TO-DO añade márgenes de tolerancia*/
+        if (ozonoBabor == ozonoEstribor){
+            estadoTimonExterno = 0;
+        } else if (ozonoBabor > ozonoEstribor) {
+            estadoTimonExterno = 1;
+        } else {
+            estadoTimonExterno = 2;
+        }
+        /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
+
+        blink_motorTimon(PIN_TIMON_EXTERNO_A, PIN_TIMON_EXTERNO_R, estadoTimonExterno);
+        blink_motorTimon(PIN_TIMON_INTERNO_A, PIN_TIMON_INTERNO_R, estadoTimonInterno);
+        /* FASE 5: EMISIÓN DE DATOS Y SLEEP */
+        /* TO-DO  AJUSTAR PARA INCLUIR GSM TAMBIÉN 
+        TO-DO ALERTA A TELEGRAM SI OZONO TRAS FILTRO ES MUY PARECIDO O MAYOR QUE OZONO ANTES DE FILTROS
+        */
+        // TO-DO probablemente borrar ya que requiere control de navegación
         if (sleepEnabled && contadorAdormir > 15)
         {
             // Hora de dormir para ahorrar energía. Debe ser light sleep y no hacerse todo el rato para no hacer disrupción excesiva en las comunicaciones.
