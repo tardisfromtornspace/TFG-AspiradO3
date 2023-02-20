@@ -71,6 +71,7 @@
 
 // Para GPS
 // TO-DO usar el código de uart nmea_example?
+#include "nmea_parser.h"
 
 // Para mensajes genéricos
 #include <string.h>
@@ -131,10 +132,12 @@ static const char *TAG = "ServidorSimple";
 #define VOLTREF 5 // Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref
 
 /* GPS */
+#define TIME_ZONE (+8)   //Beijing Time TO-DO ajustar a tiempo de Europa Central
+#define YEAR_BASE (2000) //date in GPS starts from 2000
 
 /* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
-#define BLINK_GPIO CONFIG_BLINK_GPIO
+#define BLINK_GPIO CONFIG_BLINK_GPIO // 18 originariamente TO-DO borrar si no es necesario
 #define GPIO_WAKEUP_NUM PIN_SWITCH
 #define GPIO_WAKEUP_LEVEL 0
 // Fin del LED
@@ -190,16 +193,17 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 static const char *TAG_CH[4][10] = {{"ADC1_CH6"}, {"ADC2_CH7"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
 #else
 // TO-DO ver compatibilidad
-#define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_2
-#define ADC2_EXAMPLE_CHAN0 ADC2_CHANNEL_0
-#define ADC3_EXAMPLE_CHAN0 ADC2_CHANNEL_1
-#define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_3
+#define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_6
+#define ADC2_EXAMPLE_CHAN0 ADC1_CHANNEL_7 // Usamos Wifi, no podemos usar el ADC2
+#define ADC3_EXAMPLE_CHAN0 ADC1_CHANNEL_4
+#define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
 static const char *TAG_CH[4][10] = {{"ADC1_CH6"}, {"ADC2_CH7"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
 #endif
 
-#define PIN_ANALOG 34
-#define PIN_ANALOG2 32
-#define PIN_ANALOG3 33
+#define PIN_ANALOG 35
+#define PIN_ANALOG2 34
+#define PIN_ANALOG3 32
+#define PIN_ANALOG4 33
 
 // ADC Attenuation
 #define ADC_EXAMPLE_ATTEN ADC_ATTEN_DB_11
@@ -267,7 +271,22 @@ int datoI2CCO2legible = 0; // Concentracion de quimicos en el agua, usamos el se
 int temperaturaAtmos = 0; // Temperatura atmosferica en grados centigrados.
 int humedadAtmos = 0; // Humedad relativa en %. Va de 0 a 100
 
-int gps = 0; // TO-DO ES UN STUB CORRIGE
+/* Info GPS TO-DO ajustar*/
+int gpsdateyear = 2000;
+int gpsdatemonth = 1;
+int gpsdateday = 1;
+int gpstimhour = 1;
+int gpstimminute = 0;
+int gpstimsecond = 0;
+int gpslatitude = 0;
+int gpslongitude = 0;
+int gpsaltitude = 0;
+int gpsspeed = 0;
+
+int gpslatitudeAnt = 0;
+int gpslongitudeAnt = 0;
+int gpsaltitudeAnt = 0;
+int gpsspeedAnt = 0;
 
 int datoI2CFotonlegible = 0; // Concentración de químicos en el algua filtrada, usamos el sensor de luz como mock TO-DO BORRAR
 
@@ -336,6 +355,58 @@ static void configure_led(void)
 }
 
 #endif
+
+/*Función GPS, USAMOS GPIO 5 por defecto */
+/**
+ * @brief GPS Event Handler
+ *
+ * @param event_handler_arg handler specific arguments
+ * @param event_base event base, here is fixed to ESP_NMEA_EVENT
+ * @param event_id event id
+ * @param event_data event specific arguments
+ */
+static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    gps_t *gps = NULL;
+    switch (event_id) {
+    case GPS_UPDATE:
+        gps = (gps_t *)event_data;
+        /* print information parsed from GPS statements */
+        ESP_LOGI(TAG, "%d/%d/%d %d:%d:%d => \r\n"
+                 "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+                 "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
+                 "\t\t\t\t\t\taltitude   = %.02fm\r\n"
+                 "\t\t\t\t\t\tspeed      = %fm/s",
+                 gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
+                 gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second,
+                 gps->latitude, gps->longitude, gps->altitude, gps->speed);
+        gpsdateyear = gps->date.year + YEAR_BASE;
+        gpsdatemonth = gps->date.month;
+        gpsdateday = gps->date.day;
+        gpstimhour = gps->tim.hour + TIME_ZONE;
+        gpstimminute = gps->tim.minute;
+        gpstimsecond = gps->tim.second;
+        /*Cargamos la info anterior, por comparar*/
+        gpslatitudeAnt = gpslatitude;
+        gpslongitudeAnt = gpslongitude;
+        gpsaltitudeAnt = gpsaltitude;
+        gpsspeedAnt = gpsspeed;
+        
+        gpslatitude = gps->latitude;
+        gpslongitude = gps->longitude;
+        gpsaltitude = gps->altitude;
+        gpsspeed = gps->speed;
+        break;
+    case GPS_UNKNOWN:
+        /* print unknown statements */
+        ESP_LOGW(TAG, "UART Unknown statement:%s", (char *)event_data);
+        break;
+    default:
+        break;
+    }
+}
+
+/*MOTORES*/
 
 static void blink_motorAspirador(void)
 {
@@ -740,7 +811,7 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     temperaturaAtmos = -45 + (int) 175 * (dato[0] * 256 + dato[1])/((double) 65536-1); // Este sensor manda primero el MSB y luego el LSB, y eso se debe convertir a las unidades
     humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
 
-    ESP_LOGI(TAG, "Lectura de humedad me sale %X y temperatura %X", humedadAtmos, temperaturaAtmos);
+    ESP_LOGI(TAG, "Lectura de humedad me sale %d y temperatura %d", humedadAtmos, temperaturaAtmos);
     return ESP_OK;
 }
 
@@ -1013,7 +1084,10 @@ static void mqtt_app_start(void)
     cJSON_AddNumberToObject(root, "tempAtmos", temperaturaAtmos);                  // En grados Celsius
     cJSON_AddNumberToObject(root, "humedadRel", humedadAtmos);                     // En %
     cJSON_AddNumberToObject(root, "energiaSolar", voltajeSolar);                   // En voltios
-    cJSON_AddNumberToObject(root, "posicionGNSS", estadoTimonInterno);
+    cJSON_AddNumberToObject(root, "latitudGNSS", gpslatitude);                     // Grados
+    cJSON_AddNumberToObject(root, "longitudGNSS", gpslongitude);
+    cJSON_AddNumberToObject(root, "altitudGNSS", gpsaltitude);
+    cJSON_AddNumberToObject(root, "velocidadGNSS", gpsspeed);
 
     char *post_data = cJSON_PrintUnformatted(root);
     // Enviar los datos
@@ -1669,6 +1743,14 @@ static void configure_analog(void)
     gpio_reset_pin(PIN_ANALOG2);
     /* Set the GPIO 32 as a push/pull output */
     gpio_set_direction(PIN_ANALOG2, GPIO_MODE_INPUT);
+
+        gpio_reset_pin(PIN_ANALOG3);
+    /* Set the GPIO 32 as a push/pull output */
+    gpio_set_direction(PIN_ANALOG3, GPIO_MODE_INPUT);
+
+        gpio_reset_pin(PIN_ANALOG4);
+    /* Set the GPIO 32 as a push/pull output */
+    gpio_set_direction(PIN_ANALOG4, GPIO_MODE_INPUT);
 }
 
 void sleepDelDisplay(void)
@@ -1815,6 +1897,7 @@ void app_main(void)
     char segundalineChar[32];
     char terceralineChar[32];
     char cuartalineChar[32];
+    char quintalineChar[32];
     ssd1306_clear_screen(&dev, false); // El display a 0, no a valores basura
 
 #if CONFIG_SSD1306_128x64
@@ -1884,11 +1967,11 @@ void app_main(void)
      */
     // deQueMeLevante(sleep_time_ms);
     //  Sleep segun el boton del display
-    sleepDelDisplay();
+    //sleepDelDisplay();
 
     // Sleep de 60 segundos
-    const int wakeup_time_sec = 60;
-    printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
+    //const int wakeup_time_sec = 60;
+    //printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
 
     /*
      * Registrar handlers de evento para montar el servidor cuando se conectan el Wi-Di o Ethernet, y parar cuando se desconecta.
@@ -1915,8 +1998,8 @@ void app_main(void)
     client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(client);
 
-    // Task HTTP2 para Telegram
-    xTaskCreate(&http2_task, "http2_task", (1024 * 32), NULL, 5, NULL);
+    // Task HTTP2 para Telegram TO-DO descomentar???
+    // xTaskCreate(&http2_task, "http2_task", (1024 * 32), NULL, 5, NULL);
 
     // TEST MOTOR ASPIRADOR TO-DO TO VERIFY
     s_aspirador_state = true;
@@ -1929,6 +2012,15 @@ void app_main(void)
 
     // Task ADC? TO-DO?
     // xTaskCreate(adc_app_loop, "adc_receive_data_0", 1024 * 2, (void *)0, 10, NULL);
+
+    /*GPS*/
+
+    /* NMEA parser configuration */
+    nmea_parser_config_t configGPS = NMEA_PARSER_CONFIG_DEFAULT(); // Usamos configuración por defecto, GPIO 5 como RX
+    /* init NMEA parser library */
+    nmea_parser_handle_t nmea_hdl = nmea_parser_init(&configGPS);
+    /* register event handler for NMEA parser library TO-DO VERIFICAR QUE CAPTA DATOS*/
+    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 
     /*
      * Bucle infinito TO-DO mejorar con Tasks?
@@ -1988,12 +2080,12 @@ void app_main(void)
         ESP_LOGI(TAG, "Procedo a medir ADC");
         adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
 
-        ESP_LOGI(TAG_CH[0][0], "raw  data: %d", adc_raw[0][0]);
+        ESP_LOGI(TAG_CH[0][0], "raw  O3 babor data: %d", adc_raw[0][0]);
         if (cali_enable)
         {
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[0][0], &adc1_chars);
             ozonoBabor = voltage;
-            ESP_LOGI(TAG_CH[0][0], "cali data: %d mV", voltage);
+            ESP_LOGI(TAG_CH[0][0], "cali O3 babor data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
@@ -2007,7 +2099,7 @@ void app_main(void)
         } while (ret == ESP_ERR_INVALID_STATE);
         ESP_ERROR_CHECK(ret);
 #endif
-        ESP_LOGI(TAG_CH[1][0], "raw  data: %d", adc_raw[1][0]);
+        ESP_LOGI(TAG_CH[1][0], "raw O3 estribor data: %d", adc_raw[1][0]);
         if (cali_enable)
         {
 #if CONFIG_IDF_TARGET_ESP32
@@ -2016,7 +2108,7 @@ void app_main(void)
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[1][0], &adc2_chars);
 #endif
             ozonoEstribor = voltage;
-            ESP_LOGI(TAG_CH[1][0], "cali data: %d mV", voltage);
+            ESP_LOGI(TAG_CH[1][0], "cali O3 estribor data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
@@ -2031,7 +2123,7 @@ void app_main(void)
         } while (ret == ESP_ERR_INVALID_STATE);
         ESP_ERROR_CHECK(ret);
 #endif
-        ESP_LOGI(TAG_CH[2][0], "raw  data: %d", adc_raw[2][0]);
+        ESP_LOGI(TAG_CH[2][0], "raw O3 tras filtro data: %d", adc_raw[2][0]);
         if (cali_enable)
         {
 #if CONFIG_IDF_TARGET_ESP32
@@ -2040,13 +2132,13 @@ void app_main(void)
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[2][0], &adc2_chars);
 #endif
             ozonoTrasFiltro = voltage;
-            ESP_LOGI(TAG_CH[2][0], "cali data: %d mV", voltage);
+            ESP_LOGI(TAG_CH[2][0], "cali O3 tras filtro data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
 
 #if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
-        adc_raw[3][0] = adc1_get_raw(ADC3_EXAMPLE_CHAN0);
+        adc_raw[3][0] = adc1_get_raw(ADC4_EXAMPLE_CHAN0);
 #else
         do
         {
@@ -2054,7 +2146,7 @@ void app_main(void)
         } while (ret == ESP_ERR_INVALID_STATE);
         ESP_ERROR_CHECK(ret);
 #endif
-        ESP_LOGI(TAG_CH[3][0], "raw  data: %d", adc_raw[3][0]);
+        ESP_LOGI(TAG_CH[3][0], "raw voltaje Solar data: %d", adc_raw[3][0]);
         if (cali_enable)
         {
 #if CONFIG_IDF_TARGET_ESP32
@@ -2063,7 +2155,7 @@ void app_main(void)
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc2_chars);
 #endif
             voltajeSolar = voltage;
-            ESP_LOGI(TAG_CH[3][0], "cali data: %d mV", voltage);
+            ESP_LOGI(TAG_CH[3][0], "cali voltaje Solar data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
@@ -2086,15 +2178,22 @@ void app_main(void)
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
         /*TO-DO añade márgenes de tolerancia*/
         if (ozonoBabor == ozonoEstribor){
-            estadoTimonExterno = 0;
-        } else if (ozonoBabor > ozonoEstribor) {
+            ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = 1;
+        } else if (ozonoBabor > ozonoEstribor) {
+            ESP_LOGI(TAG, "O3B > 03E");
+            estadoTimonExterno = 0;
         } else {
+            ESP_LOGI(TAG, "O3B < 03E");
             estadoTimonExterno = 2;
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
-
+        if (gpsspeed - gpsspeedAnt > 0) {
+            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO*/
+        }
+        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO");
         blink_motorTimon(PIN_TIMON_EXTERNO_A, PIN_TIMON_EXTERNO_R, estadoTimonExterno);
+        ESP_LOGI(TAG, "MUEVO TIMON INTERNO");
         blink_motorTimon(PIN_TIMON_INTERNO_A, PIN_TIMON_INTERNO_R, estadoTimonInterno);
         /* FASE 5: EMISIÓN DE DATOS Y SLEEP */
         /* TO-DO  AJUSTAR PARA INCLUIR GSM TAMBIÉN 
@@ -2104,28 +2203,28 @@ void app_main(void)
         if (sleepEnabled && contadorAdormir > 15)
         {
             // Hora de dormir para ahorrar energía. Debe ser light sleep y no hacerse todo el rato para no hacer disrupción excesiva en las comunicaciones.
-            esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000); 
+            //esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000); 
             printf("Entering light sleep\n");
 
             /* To make sure the complete line is printed before entering sleep mode,
              * need to wait until UART TX FIFO is empty:
              */
-            uart_wait_tx_idle_polling(CONFIG_ESP_CONSOLE_UART_NUM);
+            //uart_wait_tx_idle_polling(CONFIG_ESP_CONSOLE_UART_NUM);
 
             // esp_sleep_enable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
-            esp_light_sleep_start();
+            //esp_light_sleep_start();
 
             /* Get timestamp before entering sleep */
-            int64_t t_before_us = esp_timer_get_time();
+            //int64_t t_before_us = esp_timer_get_time();
 
             /* Enter sleep mode */
-            esp_light_sleep_start();
+            //esp_light_sleep_start();
 
             /* Get timestamp after waking up from sleep */
-            int64_t t_after_us = esp_timer_get_time();
+            //int64_t t_after_us = esp_timer_get_time();
 
             /* Determine wake up reason */
-            deQueMeLevante((t_after_us - t_before_us) / 1000);
+            //deQueMeLevante((t_after_us - t_before_us) / 1000);
             vTaskDelay(pdMS_TO_TICKS(5000)); // Tras el sleep el wifi está caído, hay que darle tiempo para recuperarse
             
             contadorAdormir = 0;
@@ -2139,4 +2238,9 @@ void app_main(void)
         }
 
     }
+    /*GPS, deinicializar TO-DO no es necesario?*/
+    /* unregister event handler */
+    nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
+    /* deinit NMEA parser library */
+    nmea_parser_deinit(nmea_hdl);
 }

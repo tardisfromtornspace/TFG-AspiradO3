@@ -2174,6 +2174,126 @@
                 "range": null,
                 "title": "Enable wakeup from GPIO",
                 "type": "bool"
+            },
+            {
+                "children": [],
+                "depends_on": null,
+                "help": "GPIO number for UART RX pin. See UART documentation for more information\nabout available pin numbers for UART.",
+                "id": "NMEA_PARSER_UART_RXD",
+                "name": "NMEA_PARSER_UART_RXD",
+                "range": [
+                    0,
+                    34
+                ],
+                "title": "UART RXD pin number",
+                "type": "int"
+            },
+            {
+                "children": [],
+                "depends_on": null,
+                "help": "Size of the ring buffer used for UART Rx channel.",
+                "id": "NMEA_PARSER_RING_BUFFER_SIZE",
+                "name": "NMEA_PARSER_RING_BUFFER_SIZE",
+                "range": [
+                    0,
+                    2048
+                ],
+                "title": "NMEA Parser Ring Buffer Size",
+                "type": "int"
+            },
+            {
+                "children": [],
+                "depends_on": null,
+                "help": "Stack size of NMEA Parser task.",
+                "id": "NMEA_PARSER_TASK_STACK_SIZE",
+                "name": "NMEA_PARSER_TASK_STACK_SIZE",
+                "range": [
+                    0,
+                    4096
+                ],
+                "title": "NMEA Parser Task Stack Size",
+                "type": "int"
+            },
+            {
+                "children": [],
+                "depends_on": null,
+                "help": "Priority of NMEA Parser task.",
+                "id": "NMEA_PARSER_TASK_PRIORITY",
+                "name": "NMEA_PARSER_TASK_PRIORITY",
+                "range": [
+                    0,
+                    24
+                ],
+                "title": "NMEA Parser Task Priority",
+                "type": "int"
+            },
+            {
+                "children": [
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enabling this option will parse the following parameter from GGA statement:\n\n- Latitude, Longitude, Altitude;\n- Number of satellites in use, fix status (no fix, GPS, DGPS), UTC time;",
+                        "id": "NMEA_STATEMENT_GGA",
+                        "name": "NMEA_STATEMENT_GGA",
+                        "range": null,
+                        "title": "GGA Statement",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enabling this option will parse the following parameter from GSA statement:\n\n- Position/Vertical/Horizontal dilution of precision;\n- Fix mode (no fix, 2D, 3D fix);\n- IDs of satellites in use;",
+                        "id": "NMEA_STATEMENT_GSA",
+                        "name": "NMEA_STATEMENT_GSA",
+                        "range": null,
+                        "title": "GSA Statement",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enabling this option will parse the following parameter from GSV statement:\n\n- Number of satellites in view;\n- Optional details of each satellite in view;",
+                        "id": "NMEA_STATEMENT_GSV",
+                        "name": "NMEA_STATEMENT_GSV",
+                        "range": null,
+                        "title": "GSV Statement",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enabling this option will parse the following parameter from RMC statement:\n\n- Validity of GPS signal;\n- Ground speed (knots) and course over ground (degrees);\n- Magnetic variation;\n- UTC date;",
+                        "id": "NMEA_STATEMENT_RMC",
+                        "name": "NMEA_STATEMENT_RMC",
+                        "range": null,
+                        "title": "RMC Statement",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enabling this option will parse the following parameter from GLL statement:\n\n- Latitude, Longitude;\n- UTC time;",
+                        "id": "NMEA_STATEMENT_GLL",
+                        "name": "NMEA_STATEMENT_GLL",
+                        "range": null,
+                        "title": "GLL Statement",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "Enabling this option will parse the following parameter from VTG statement:\n\n- Ground speed (knots, km/h) and course over ground (degrees);\n- Magnetic variation;",
+                        "id": "NMEA_STATEMENT_VTG",
+                        "name": "NMEA_STATEMENT_VTG",
+                        "range": null,
+                        "title": "VTG Statement",
+                        "type": "bool"
+                    }
+                ],
+                "depends_on": null,
+                "id": "example-configuration-nmea-statement-support",
+                "title": "NMEA Statement Support",
+                "type": "menu"
             }
         ],
         "depends_on": null,
