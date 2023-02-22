@@ -129,7 +129,9 @@ static const char *TAG = "ServidorSimple";
 #define E 2.718281828459
 #define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
 #define RESL 10100 // Va de 100 a 10100 ohmios
-#define VOLTREF 5 // Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref
+// TO-DO ajustar al sensor de ozono
+#define VOLTREF 5000 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref
+#define VOLTREFDATASHEET 5000
 
 /* GPS */
 #define TIME_ZONE (+8)   //Beijing Time TO-DO ajustar a tiempo de Europa Central
@@ -584,10 +586,13 @@ static esp_err_t CO2_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t 
  * 
 */
 static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura){
-    double resistencia = RESL * VOLTREF / (double) lecturaInicial - RESL;
-    double resistenciaAjustada = resistencia / (1 - 0.013 * temperatura -  (humedad - 55) / 30 * (0.175 + 0.2 - (20 - 20 * temperatura)));
-    double correccionLectura = RESLDATASHEET * VOLTREF / (RESLDATASHEET + resistenciaAjustada);
-    return (int) 100 * (pow(E, correccionLectura) -1);
+    double resistencia = RESL * ( VOLTREF / ((double) lecturaInicial + 1700) - 1); // TO-DO a lo mejor es bueno convertir la salida del sensor 5V a 3.3V?? El 1700 es un corrector temporal, TO-DO ARREGLAR
+    ESP_LOGI(TAG, "La resistencia me sale %lf", resistencia);
+    double resistenciaAjustada = resistencia / (1 - 0.013 * (temperatura - 20) -  (humedad - 55) / 30 * (0.175 + 0.2 - (20 - 20 * temperatura)));
+    ESP_LOGI(TAG, "La resistencia ajustada me sale %lf", resistenciaAjustada);
+    double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/RESL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/RESL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET. 1.7 es un valor corrector
+    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", correccionLectura/1000);
+    return (int) 100 * (pow(E, -correccionLectura/1000 + 4) -1);
 }
 
 // SENSOR DE O3 NO DE MIKROE TO-DO TO-DO HACER FUNCION INIT DEL SENSOR RENESAS SI ES NECESARIO
@@ -731,7 +736,7 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     i2c_cmd_link_delete(cmd);
     if (retA == ESP_OK)
     {
-        ESP_LOGI(TAG, "Logre llamar al sensor i2c tempHum y darle un comando");
+//        ESP_LOGI(TAG, "Logre llamar al sensor i2c tempHum y darle un comando");
     }
     else if (retA == ESP_ERR_TIMEOUT)
     {
@@ -753,7 +758,7 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     {
         ESP_LOGW(TAG, "Read failed");
     }
-    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+//    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
 
     i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
     ESP_ERROR_CHECK(i2c_master_start(cmd3));
@@ -771,10 +776,10 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     i2c_cmd_link_delete(cmd3);
     if (ret == ESP_OK)
     {
-        ESP_LOGW(TAG, "Recibi dato tempHum");
+//        ESP_LOGI(TAG, "Recibi dato tempHum");
         for (int i = 0; i < len; i++)
         {
-            printf("0x%02x ", dato[i]);
+//            printf("0x%02x ", dato[i]);
             if ((i + 1) % 16 == 0)
             {
                 printf("\r\n");
@@ -805,13 +810,13 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     {
         ESP_LOGW(TAG, "Read failed");
     }
-    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
+//    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
-    esp_log_buffer_hex(TAG, dato, len);
+//    esp_log_buffer_hex(TAG, dato, len);
     temperaturaAtmos = -45 + (int) 175 * (dato[0] * 256 + dato[1])/((double) 65536-1); // Este sensor manda primero el MSB y luego el LSB, y eso se debe convertir a las unidades
     humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
 
-    ESP_LOGI(TAG, "Lectura de humedad me sale %d y temperatura %d", humedadAtmos, temperaturaAtmos);
+//    ESP_LOGI(TAG, "Lectura de humedad me sale %d y temperatura %d", humedadAtmos, temperaturaAtmos);
     return ESP_OK;
 }
 
@@ -2030,7 +2035,7 @@ void app_main(void)
 
         if (gpio_get_level(PIN_SWITCH)) // TO-DO AJUSTAR? 
         {
-            ESP_LOGI(TAG, "Switch display: ON");
+//            ESP_LOGI(TAG, "Switch display: ON");
             s_switch_state = true;
             ssd1306_contrast(&dev, 0xff);
             sprintf(primeralineChar, " O3 bab: %02d", ozonoBabor);
@@ -2050,7 +2055,7 @@ void app_main(void)
         }
         else
         {
-            ESP_LOGI(TAG, "Switch display: OFF");
+//            ESP_LOGI(TAG, "Switch display: OFF");
             s_switch_state = false;
             ssd1306_clear_screen(&dev, false);
         }
@@ -2077,15 +2082,15 @@ void app_main(void)
 
         /* FASE 1: LECTURA ADC DE SENSORES MIKROE */
 
-        ESP_LOGI(TAG, "Procedo a medir ADC");
+//        ESP_LOGI(TAG, "Procedo a medir ADC");
         adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
 
-        ESP_LOGI(TAG_CH[0][0], "raw  O3 babor data: %d", adc_raw[0][0]);
+//        ESP_LOGI(TAG_CH[0][0], "raw  O3 babor data: %d", adc_raw[0][0]);
         if (cali_enable)
         {
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[0][0], &adc1_chars);
             ozonoBabor = voltage;
-            ESP_LOGI(TAG_CH[0][0], "cali O3 babor data: %d mV", voltage);
+//            ESP_LOGI(TAG_CH[0][0], "cali O3 babor data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
@@ -2099,7 +2104,7 @@ void app_main(void)
         } while (ret == ESP_ERR_INVALID_STATE);
         ESP_ERROR_CHECK(ret);
 #endif
-        ESP_LOGI(TAG_CH[1][0], "raw O3 estribor data: %d", adc_raw[1][0]);
+//        ESP_LOGI(TAG_CH[1][0], "raw O3 estribor data: %d", adc_raw[1][0]);
         if (cali_enable)
         {
 #if CONFIG_IDF_TARGET_ESP32
@@ -2108,7 +2113,7 @@ void app_main(void)
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[1][0], &adc2_chars);
 #endif
             ozonoEstribor = voltage;
-            ESP_LOGI(TAG_CH[1][0], "cali O3 estribor data: %d mV", voltage);
+//            ESP_LOGI(TAG_CH[1][0], "cali O3 estribor data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
@@ -2146,7 +2151,7 @@ void app_main(void)
         } while (ret == ESP_ERR_INVALID_STATE);
         ESP_ERROR_CHECK(ret);
 #endif
-        ESP_LOGI(TAG_CH[3][0], "raw voltaje Solar data: %d", adc_raw[3][0]);
+//        ESP_LOGI(TAG_CH[3][0], "raw voltaje Solar data: %d", adc_raw[3][0]);
         if (cali_enable)
         {
 #if CONFIG_IDF_TARGET_ESP32
@@ -2155,13 +2160,13 @@ void app_main(void)
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc2_chars);
 #endif
             voltajeSolar = voltage;
-            ESP_LOGI(TAG_CH[3][0], "cali voltaje Solar data: %d mV", voltage);
+//            ESP_LOGI(TAG_CH[3][0], "cali voltaje Solar data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
 
         /* FASE 2: LECTURA SE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
-        ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
+//        ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
 
         // TO-DO BORRAR?
@@ -2174,26 +2179,29 @@ void app_main(void)
         ozonoBabor = ajustarValoresOzono(ozonoBabor, humedadAtmos, temperaturaAtmos);
         ozonoEstribor = ajustarValoresOzono(ozonoEstribor, humedadAtmos, temperaturaAtmos);
         ozonoTrasFiltro = ajustarValoresOzono(ozonoTrasFiltro, humedadAtmos, temperaturaAtmos);
+        ESP_LOGI(TAG, "correcion O3 babor: %d", ozonoBabor );
+        ESP_LOGI(TAG, "correcion O3 estribor: %d", ozonoEstribor );
+        ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
 
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
         /*TO-DO añade márgenes de tolerancia*/
         if (ozonoBabor == ozonoEstribor){
-            ESP_LOGI(TAG, "O3B == 03E");
+//            ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = 1;
         } else if (ozonoBabor > ozonoEstribor) {
-            ESP_LOGI(TAG, "O3B > 03E");
+//            ESP_LOGI(TAG, "O3B > 03E");
             estadoTimonExterno = 0;
         } else {
-            ESP_LOGI(TAG, "O3B < 03E");
+//            ESP_LOGI(TAG, "O3B < 03E");
             estadoTimonExterno = 2;
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
         if (gpsspeed - gpsspeedAnt > 0) {
             /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO*/
         }
-        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO");
+//        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO");
         blink_motorTimon(PIN_TIMON_EXTERNO_A, PIN_TIMON_EXTERNO_R, estadoTimonExterno);
-        ESP_LOGI(TAG, "MUEVO TIMON INTERNO");
+//        ESP_LOGI(TAG, "MUEVO TIMON INTERNO");
         blink_motorTimon(PIN_TIMON_INTERNO_A, PIN_TIMON_INTERNO_R, estadoTimonInterno);
         /* FASE 5: EMISIÓN DE DATOS Y SLEEP */
         /* TO-DO  AJUSTAR PARA INCLUIR GSM TAMBIÉN 
