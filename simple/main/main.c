@@ -137,6 +137,125 @@ static const char *TAG = "ServidorSimple";
 #define TIME_ZONE (+8)   //Beijing Time TO-DO ajustar a tiempo de Europa Central
 #define YEAR_BASE (2000) //date in GPS starts from 2000
 
+#define UART_NUM_2_RXD_DIRECT_GPIO_NUM 16
+#define UART_GPIO3_DIRECT_CHANNEL UART_NUM_0
+#define RX_PINE 16
+#define TX_PINE 17
+#define NMEA_PARSER_CONFIG_CUSTOM()       \
+    {                                      \
+        .uart = {                          \
+            .uart_port = UART_NUM_1,       \
+            .tx_pin =  RX_PINE,            \
+            .rx_pin = TX_PINE,             \
+            .baud_rate = 9600,             \
+            .data_bits = UART_DATA_8_BITS, \
+            .parity = UART_PARITY_DISABLE, \
+            .stop_bits = UART_STOP_BITS_1, \
+            .event_queue_size = 16         \
+        }                                  \
+    }
+/*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
+/*#include "minmea.h"
+#define UART UART_NUM_2
+#define TXD_PIN 16
+#define RXD_PIN 17
+static const int RX_BUF_SIZE = 4096;
+void init_uart(void)
+{
+    const uart_config_t uart_config = {
+        .baud_rate = 9600,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    // We won't use a buffer for sending data.
+    uart_driver_install(UART, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+    uart_param_config(UART, &uart_config);
+    uart_set_pin(UART, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
+
+double convert_num_fixed(double num) {
+    int grados = (int) num / 100;
+    double minutos = num - (grados * 100);
+    num = grados + (minutos/60);
+    return num;
+}
+
+static void parse(char * line) {
+    switch(minmea_sentence_id(line, false)) {
+
+        case MINMEA_SENTENCE_GGA: {
+            //ESP_LOGI(tag, "GGA");
+            struct minmea_sentence_gga frame_gga;
+            if (minmea_parse_gga(&frame_gga, line)) {
+*/
+                /*
+                ESP_LOGI(tag, "$xxGGA: Latitude:Longitude %f:%f Time: %d:%d:%d\n",
+                         minmea_tofloat(&frame_gga.latitude),
+                         minmea_tofloat(&frame_gga.longitude),
+                         frame_gga.time.hours,
+                         frame_gga.time.minutes,
+                         frame_gga.time.seconds);
+                */
+/*               
+                double lat = convert_num_fixed(((double) minmea_tofloat(&frame_gga.latitude)));
+                double lon = convert_num_fixed(((double) minmea_tofloat(&frame_gga.longitude)));
+                if (isnan(lat))
+                    lat = 0;
+                if (isnan(lon))
+                    lon = 0;
+                //printf("LAT,LON: %f, %f", lat, lon);
+                LATITUD = lat;
+                LONGITUD = lon;
+
+                publishDataNumber("latitude", lat);
+                publishDataNumber("longitude", lon);
+            }
+            else {
+                ESP_LOGI(tag, "$xxGGA sentence is not parsed\n");
+            }
+        } break;
+
+        default:
+            //ESP_LOGI(tag, "DEFAULT");
+            //ESP_LOGD(tag, "Sentence - other");
+            break;
+    }
+}
+
+
+static void parse_line(char *line)
+{
+    char *p;
+    int i;
+    for (i = 1, p = strtok(line,"\n"); p != NULL; p = strtok(NULL,"\n"), i++) {
+        //printf("Output%u=%s;\n", i, p);
+        //ESP_LOGI(tag, "%u>>>>>>>>>>>>>>>> %s",i , p);
+        parse(p);
+    }
+    //ESP_LOGI(tag, "--------------------------------------------------------------");
+}
+
+static void rx_task(void *arg)
+{
+    static const char *RX_TASK_TAG = "RX_TASK";
+    esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
+    while (1) {
+        uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
+        int length = 0;
+        ESP_ERROR_CHECK(uart_get_buffered_data_len(UART, (size_t*)&length));
+        length = uart_read_bytes(UART, data, RX_BUF_SIZE, 500 / portTICK_RATE_MS);
+        //ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, data);
+        parse_line((char *)data);
+        free(data);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+*/
+
 /* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
 #define BLINK_GPIO CONFIG_BLINK_GPIO // 18 originariamente TO-DO borrar si no es necesario
@@ -370,6 +489,7 @@ static void configure_led(void)
 static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     gps_t *gps = NULL;
+    ESP_LOGI(TAG, "GPS EVENT HANDLER SE ACTIVO");
     switch (event_id) {
     case GPS_UPDATE:
         gps = (gps_t *)event_data;
@@ -573,7 +693,7 @@ static esp_err_t CO2_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t 
     ESP_LOGI(TAG, "El CO2 me sale %X", datoI2CCO2legible);
     return ESP_OK;
 }
-// TO-DO funcion cálculos corrección ozono
+
 /**
  * ajustarValoresOzono
  * Esta función toma la lectura de ozono y la corrige utilizando la fórmula del divisor de tensión
@@ -586,7 +706,7 @@ static esp_err_t CO2_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t 
  * 
 */
 static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura){
-    double resistencia = RESL * ( VOLTREF / ((double) lecturaInicial + 1700) - 1); // TO-DO a lo mejor es bueno convertir la salida del sensor 5V a 3.3V?? El 1700 es un corrector temporal, TO-DO ARREGLAR
+    double resistencia = RESL * ( VOLTREF / ((double) lecturaInicial) - 1);
     ESP_LOGI(TAG, "La resistencia me sale %lf", resistencia);
     double resistenciaAjustada = resistencia / (1 - 0.013 * (temperatura - 20) -  (humedad - 55) / 30 * (0.175 + 0.2 - (20 - 20 * temperatura)));
     ESP_LOGI(TAG, "La resistencia ajustada me sale %lf", resistenciaAjustada);
@@ -2021,11 +2141,17 @@ void app_main(void)
     /*GPS*/
 
     /* NMEA parser configuration */
-    nmea_parser_config_t configGPS = NMEA_PARSER_CONFIG_DEFAULT(); // Usamos configuración por defecto, GPIO 5 como RX
+    nmea_parser_config_t configGPS = NMEA_PARSER_CONFIG_CUSTOM(); // Usamos configuración por defecto, GPIO 5 como RX
     /* init NMEA parser library */
     nmea_parser_handle_t nmea_hdl = nmea_parser_init(&configGPS);
     /* register event handler for NMEA parser library TO-DO VERIFICAR QUE CAPTA DATOS*/
     nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+/* DEL GITHUB DE OTRO COMPAÑERO*/
+//    init_uart();
+
+    //Start test task
+    // GPS
+//    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL);
 
     /*
      * Bucle infinito TO-DO mejorar con Tasks?
