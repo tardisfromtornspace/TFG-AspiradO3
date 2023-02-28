@@ -155,7 +155,7 @@ static const char *TAG = "ServidorSimple";
         }                                  \
     }
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
-/*#include "minmea.h"
+/*#include "minmea.h" TO-DO pásalo al parser de nmea*/
 #define UART UART_NUM_2
 #define TXD_PIN 16
 #define RXD_PIN 17
@@ -183,8 +183,9 @@ double convert_num_fixed(double num) {
     num = grados + (minutos/60);
     return num;
 }
-
+/*
 static void parse(char * line) {
+    
     switch(minmea_sentence_id(line, false)) {
 
         case MINMEA_SENTENCE_GGA: {
@@ -225,8 +226,8 @@ static void parse(char * line) {
             break;
     }
 }
-
-
+*/
+/*
 static void parse_line(char *line)
 {
     char *p;
@@ -237,24 +238,36 @@ static void parse_line(char *line)
         parse(p);
     }
     //ESP_LOGI(tag, "--------------------------------------------------------------");
-}
+}*/
 
 static void rx_task(void *arg)
 {
     static const char *RX_TASK_TAG = "RX_TASK";
     esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
+    
+    esp_gps_t *esp_gps = (esp_gps_t *)arg; // Aniadido por mí
+
     while (1) {
-        uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
+        //uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
         int length = 0;
         ESP_ERROR_CHECK(uart_get_buffered_data_len(UART, (size_t*)&length));
-        length = uart_read_bytes(UART, data, RX_BUF_SIZE, 500 / portTICK_RATE_MS);
-        //ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, data);
-        parse_line((char *)data);
-        free(data);
+        //length = uart_read_bytes(UART, data, RX_BUF_SIZE, 500 / portTICK_RATE_MS);
+        length = uart_read_bytes(UART, esp_gps->buffer, RX_BUF_SIZE, 100 / portTICK_PERIOD_MS);
+        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
+
+        /* make sure the line is a standard string TO-DO*/
+        esp_gps->buffer[length] = '\0';
+        /* Send new line to handle */
+        if (gps_decode(esp_gps, length + 1) != ESP_OK) {
+            ESP_LOGW(RX_TASK_TAG, "GPS decode line failed");
+        }
+
+        //parse_line((char *)data);
+        //free(data);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
-*/
+
 
 /* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
@@ -291,6 +304,18 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 #define TEMPHUM_SENSOR_ADDR 0x44 /*Dir sensor tempHum*/
 #define COMANDO_TEMPHUM_MSB 0x24
 #define COMANDO_TEMPHUM_LSB 0x16 /*Los comandos de este sensor son de 16 bits, indican el MSB el modo y el LSB la frecuencia, así 0x24 0x16 es modo SIngle Shot con baja repetibilidad*/
+
+#define ADC12C_AADR 0x68 /*Direccion del ADC I2C externo, 4 bits de dir (1101) + 3 de canal + bit r/w, 1101 = 0D  
+The I 2C address bits (A2, A1, A0 bits) for the MCP3423 and MCP3424 are user configurable and
+determined by the logic status of the two external address selection pins on the user’s application board
+(Adr0 and Adr1 pins)
+Así, si lo pongo Adr0 = Adr1 = LOW => la dirección es 0x68 (que se volvería 0xD0 o 0xD1 al añadir el bit de lectura/escritura)
+*/
+/*Bit de configuracion es por defecto 1 00 1 00 00 (o sea output no actualizado, canal de selección 1, modo conversión continuo, 12 bits, ganacia x1)*/
+#define regADCI2C_paraCanal1 0x90 // 1 00 1 0000
+#define regADCI2C_paraCanal2 0xB0 // 1 01 1 0000
+#define regADCI2C_paraCanal3 0xD0 // 1 10 1 0000
+#define regADCI2C_paraCanal4 0xF0 // 1 11 1 0000
 
 #define LUZ_SENSOR_ADDR 0x10 /*Dir sensor luminosidad*/
 #define LUZ_REG_ADDR 0x04    /*Dir registro de luminosidad es 0x04*/
@@ -835,6 +860,110 @@ static esp_err_t O3_ZMOD4510_register_read(uint8_t slave_addr, uint8_t reg_addr,
     }
     ESP_LOGI(TAG, "Lectura de ozono Renesas me sale %X", datoozono);
     return ESP_OK;
+}
+int ADC12C_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len)
+{
+
+    uint8_t dato[3] = {0, 0, 0}; // En modo de 12 bits nos devuelve 3 bytes, 2 de lectura y uno de configuración
+
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    // Primero hacemos que el sensor nos lea el comando
+    ESP_ERROR_CHECK(i2c_master_start(cmd));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd));
+
+    esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+
+    i2c_cmd_link_delete(cmd);
+    if (retA == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Logre llamar al modulo ADC12C y darle un comando");
+    }
+    else if (retA == ESP_ERR_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "Bus is busy");
+    }
+    else if (retA == ESP_ERR_INVALID_ARG)
+    {
+        ESP_LOGW(TAG, "Parameter error");
+    }
+    else if (retA == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
+    }
+    else if (retA == ESP_FAIL)
+    {
+        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+    }
+    else
+    {
+        ESP_LOGW(TAG, "Read failed");
+    }
+//    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+
+    i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
+    ESP_ERROR_CHECK(i2c_master_start(cmd3));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, (slave_addr << 1) | READ_BIT, ACK_VAL));
+    int i = 0;
+    for (i = 0; i < len - 1; i++)
+    {
+        ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[i], ACK_VAL));
+    }
+    ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[len - 1], NACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd3));
+
+    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd3, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+
+    i2c_cmd_link_delete(cmd3);
+    if (ret == ESP_OK)
+    {
+//        ESP_LOGI(TAG, "Recibi dato tempHum");
+        for (int i = 0; i < len; i++)
+        {
+//            printf("0x%02x ", dato[i]);
+            if ((i + 1) % 16 == 0)
+            {
+                printf("\r\n");
+            }
+        }
+        if (len % 16)
+        {
+            printf("\r\n");
+        }
+    }
+    else if (ret == ESP_ERR_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "Bus is busy");
+    }
+    else if (ret == ESP_ERR_INVALID_ARG)
+    {
+        ESP_LOGW(TAG, "Parameter error");
+    }
+    else if (ret == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
+    }
+    else if (ret == ESP_FAIL)
+    {
+        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+    }
+    else
+    {
+        ESP_LOGW(TAG, "Read failed");
+    }
+    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
+
+    esp_log_buffer_hex(TAG, dato, len);
+    uint8_t restoMSB = dato[0]%16; // En modo 12-bit los 4 primeros bits del MSB son repeticiones del MSB, solo nos interesan entonces los otros 4 bits
+    int result = (int) 0.001 * (restoMSB * 256 + dato[1])/(2-1) * VOLTREFDATASHEET / 2048.0; // Según datasheet, multiplicar el resultado por el LSB y dividir por el factor de ganancia, que en este caso es 1, además hay que tener en cuenta que 2048 ahora son 5V
+    //temperaturaAtmos = -45 + (int) 175 * (dato[0] * 256 + dato[1])/((double) 65536-1); // Este sensor manda primero el MSB y luego el LSB, y eso se debe convertir a las unidades
+    //humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
+
+    ESP_LOGI(TAG, "Lectura de ADC me sale %d ", result);
+    //return ESP_OK;
+    return result;
 }
 
 static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, uint8_t reg_addrLSB, size_t len)
@@ -2141,17 +2270,17 @@ void app_main(void)
     /*GPS*/
 
     /* NMEA parser configuration */
-    nmea_parser_config_t configGPS = NMEA_PARSER_CONFIG_CUSTOM(); // Usamos configuración por defecto, GPIO 5 como RX
+    //nmea_parser_config_t configGPS = NMEA_PARSER_CONFIG_CUSTOM(); // Usamos configuración por defecto, GPIO 5 como RX
     /* init NMEA parser library */
-    nmea_parser_handle_t nmea_hdl = nmea_parser_init(&configGPS);
+    //nmea_parser_handle_t nmea_hdl = nmea_parser_init(&configGPS);
     /* register event handler for NMEA parser library TO-DO VERIFICAR QUE CAPTA DATOS*/
-    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+    //nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 /* DEL GITHUB DE OTRO COMPAÑERO*/
-//    init_uart();
+    init_uart();
 
     //Start test task
     // GPS
-//    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL);
+    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL);
 
     /*
      * Bucle infinito TO-DO mejorar con Tasks?
@@ -2294,6 +2423,10 @@ void app_main(void)
         /* FASE 2: LECTURA SE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
 //        ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
+        /* TO-DO COMPROBAR QUE ESTO FUNCIONA Y ENTONCES COMENTA EL ADC INTERNO excepto para solar*/
+        ozonoBabor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal1, 3);
+        ozonoEstribor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal2, 3);
+        ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
 
         // TO-DO BORRAR?
         //ESP_LOGI(TAG, "Procedo a leer I2C de Luminosidad");
@@ -2374,7 +2507,7 @@ void app_main(void)
     }
     /*GPS, deinicializar TO-DO no es necesario?*/
     /* unregister event handler */
-    nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
+    //nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
     /* deinit NMEA parser library */
-    nmea_parser_deinit(nmea_hdl);
+    //nmea_parser_deinit(nmea_hdl);
 }

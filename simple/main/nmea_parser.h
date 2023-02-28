@@ -124,6 +124,31 @@ typedef struct {
 } gps_t;
 
 /**
+ * @brief GPS parser library runtime structure
+ * MODIFICACION POR MI TO-DO ELIMINAR SI NO FUNCIONA
+ */
+#define NMEA_MAX_STATEMENT_ITEM_LENGTH (16)
+
+typedef struct {
+    uint8_t item_pos;                              /*!< Current position in item */
+    uint8_t item_num;                              /*!< Current item number */
+    uint8_t asterisk;                              /*!< Asterisk detected flag */
+    uint8_t crc;                                   /*!< Calculated CRC value */
+    uint8_t parsed_statement;                      /*!< OR'd of statements that have been parsed */
+    uint8_t sat_num;                               /*!< Satellite number */
+    uint8_t sat_count;                             /*!< Satellite count */
+    uint8_t cur_statement;                         /*!< Current statement ID */
+    uint32_t all_statements;                       /*!< All statements mask */
+    char item_str[NMEA_MAX_STATEMENT_ITEM_LENGTH]; /*!< Current item */
+    gps_t parent;                                  /*!< Parent class */
+    uart_port_t uart_port;                         /*!< Uart port number */
+    uint8_t *buffer;                               /*!< Runtime buffer */
+    esp_event_loop_handle_t event_loop_hdl;        /*!< Event loop handle */
+    TaskHandle_t tsk_hdl;                          /*!< NMEA Parser task handle */
+    QueueHandle_t event_queue;                     /*!< UART event queue handle */
+} esp_gps_t;
+
+/**
  * @brief Configuration of NMEA Parser
  *
  */
@@ -213,6 +238,9 @@ esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl, esp_event_handl
  *  - Others: Fail
  */
 esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl, esp_event_handler_t event_handler);
+
+// TO-DO COSA MÍA PARA PODER PARSEAR FUERA
+esp_err_t gps_decode(esp_gps_t *esp_gps, size_t len);
 
 #ifdef __cplusplus
 }
