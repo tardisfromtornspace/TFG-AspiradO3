@@ -155,7 +155,6 @@ typedef struct {
 typedef struct {
     struct {
         uart_port_t uart_port;        /*!< UART port number */
-        uint32_t tx_pin;              /*!< UART tx Pin number */
         uint32_t rx_pin;              /*!< UART Rx Pin number */
         uint32_t baud_rate;           /*!< UART baud rate */
         uart_word_length_t data_bits; /*!< UART data bits length */
@@ -241,6 +240,9 @@ esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl, esp_event_ha
 
 // TO-DO COSA MÍA PARA PODER PARSEAR FUERA
 esp_err_t gps_decode(esp_gps_t *esp_gps, size_t len);
+
+// TO-DO ANIADIDO POR MI
+esp_err_t nmea_parser_add_handlerEspecial(esp_gps_t *esp_gps, esp_event_handler_t event_handler, void *handler_args);
 
 #ifdef __cplusplus
 }

@@ -695,7 +695,7 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t *config)
         ESP_LOGE(GPS_TAG, "config uart parameter failed");
         goto err_uart_config;
     }
-    if (uart_set_pin(esp_gps->uart_port, config->uart.tx_pin, config->uart.rx_pin,
+    if (uart_set_pin(esp_gps->uart_port, UART_PIN_NO_CHANGE, config->uart.rx_pin,
                      UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
         ESP_LOGE(GPS_TAG, "config uart gpio failed");
         goto err_uart_config;
@@ -774,6 +774,13 @@ esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl)
 esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl, esp_event_handler_t event_handler, void *handler_args)
 {
     esp_gps_t *esp_gps = (esp_gps_t *)nmea_hdl;
+    return esp_event_handler_register_with(esp_gps->event_loop_hdl, ESP_NMEA_EVENT, ESP_EVENT_ANY_ID,
+                                           event_handler, handler_args);
+}
+
+// TO-DO ANIADIDO POR MI
+esp_err_t nmea_parser_add_handlerEspecial(esp_gps_t *esp_gps, esp_event_handler_t event_handler, void *handler_args)
+{
     return esp_event_handler_register_with(esp_gps->event_loop_hdl, ESP_NMEA_EVENT, ESP_EVENT_ANY_ID,
                                            event_handler, handler_args);
 }

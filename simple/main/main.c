@@ -106,10 +106,10 @@ static const char *TAG = "ServidorSimple";
 /* Motores AspiradO3 */
 // WIP Arreglar conflicto con el LED
 // Motor Aspirador
-#define PIN_ASPIRADOR 18
+#define PIN_ASPIRADOR 21
 // Motor interno que redirige hacia adelante o atrás
-#define PIN_TIMON_INTERNO_A 19
-#define PIN_TIMON_INTERNO_R 21
+#define PIN_TIMON_INTERNO_A 18
+#define PIN_TIMON_INTERNO_R 19
 // Motor del timón externo - nos basamos en la capacidad de que el timón se reoriente automáticamente cuando el motor se apague gracias al flujo de aire.
 #define PIN_TIMON_EXTERNO_A 22
 #define PIN_TIMON_EXTERNO_R 23
@@ -139,14 +139,12 @@ static const char *TAG = "ServidorSimple";
 
 #define UART_NUM_2_RXD_DIRECT_GPIO_NUM 16
 #define UART_GPIO3_DIRECT_CHANNEL UART_NUM_0
-#define RX_PINE 16
-#define TX_PINE 17
+
 #define NMEA_PARSER_CONFIG_CUSTOM()       \
     {                                      \
         .uart = {                          \
             .uart_port = UART_NUM_1,       \
-            .tx_pin =  RX_PINE,            \
-            .rx_pin = TX_PINE,             \
+            .rx_pin = 17,                  \
             .baud_rate = 9600,             \
             .data_bits = UART_DATA_8_BITS, \
             .parity = UART_PARITY_DISABLE, \
@@ -155,118 +153,11 @@ static const char *TAG = "ServidorSimple";
         }                                  \
     }
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
-/*#include "minmea.h" TO-DO pásalo al parser de nmea*/
+#include "minmea.h" /*TO-DO pásalo al parser de nmea*/
 #define UART UART_NUM_2
 #define TXD_PIN 16
-#define RXD_PIN 17
+#define RXD_PIN 3 // 17
 static const int RX_BUF_SIZE = 4096;
-void init_uart(void)
-{
-    const uart_config_t uart_config = {
-        .baud_rate = 9600,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_APB,
-    };
-
-    // We won't use a buffer for sending data.
-    uart_driver_install(UART, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
-    uart_param_config(UART, &uart_config);
-    uart_set_pin(UART, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-}
-
-double convert_num_fixed(double num) {
-    int grados = (int) num / 100;
-    double minutos = num - (grados * 100);
-    num = grados + (minutos/60);
-    return num;
-}
-/*
-static void parse(char * line) {
-    
-    switch(minmea_sentence_id(line, false)) {
-
-        case MINMEA_SENTENCE_GGA: {
-            //ESP_LOGI(tag, "GGA");
-            struct minmea_sentence_gga frame_gga;
-            if (minmea_parse_gga(&frame_gga, line)) {
-*/
-                /*
-                ESP_LOGI(tag, "$xxGGA: Latitude:Longitude %f:%f Time: %d:%d:%d\n",
-                         minmea_tofloat(&frame_gga.latitude),
-                         minmea_tofloat(&frame_gga.longitude),
-                         frame_gga.time.hours,
-                         frame_gga.time.minutes,
-                         frame_gga.time.seconds);
-                */
-/*               
-                double lat = convert_num_fixed(((double) minmea_tofloat(&frame_gga.latitude)));
-                double lon = convert_num_fixed(((double) minmea_tofloat(&frame_gga.longitude)));
-                if (isnan(lat))
-                    lat = 0;
-                if (isnan(lon))
-                    lon = 0;
-                //printf("LAT,LON: %f, %f", lat, lon);
-                LATITUD = lat;
-                LONGITUD = lon;
-
-                publishDataNumber("latitude", lat);
-                publishDataNumber("longitude", lon);
-            }
-            else {
-                ESP_LOGI(tag, "$xxGGA sentence is not parsed\n");
-            }
-        } break;
-
-        default:
-            //ESP_LOGI(tag, "DEFAULT");
-            //ESP_LOGD(tag, "Sentence - other");
-            break;
-    }
-}
-*/
-/*
-static void parse_line(char *line)
-{
-    char *p;
-    int i;
-    for (i = 1, p = strtok(line,"\n"); p != NULL; p = strtok(NULL,"\n"), i++) {
-        //printf("Output%u=%s;\n", i, p);
-        //ESP_LOGI(tag, "%u>>>>>>>>>>>>>>>> %s",i , p);
-        parse(p);
-    }
-    //ESP_LOGI(tag, "--------------------------------------------------------------");
-}*/
-
-static void rx_task(void *arg)
-{
-    static const char *RX_TASK_TAG = "RX_TASK";
-    esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
-    
-    esp_gps_t *esp_gps = (esp_gps_t *)arg; // Aniadido por mí
-
-    while (1) {
-        //uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
-        int length = 0;
-        ESP_ERROR_CHECK(uart_get_buffered_data_len(UART, (size_t*)&length));
-        //length = uart_read_bytes(UART, data, RX_BUF_SIZE, 500 / portTICK_RATE_MS);
-        length = uart_read_bytes(UART, esp_gps->buffer, RX_BUF_SIZE, 100 / portTICK_PERIOD_MS);
-        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
-
-        /* make sure the line is a standard string TO-DO*/
-        esp_gps->buffer[length] = '\0';
-        /* Send new line to handle */
-        if (gps_decode(esp_gps, length + 1) != ESP_OK) {
-            ESP_LOGW(RX_TASK_TAG, "GPS decode line failed");
-        }
-
-        //parse_line((char *)data);
-        //free(data);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-}
 
 
 /* LED */
@@ -316,6 +207,28 @@ Así, si lo pongo Adr0 = Adr1 = LOW => la dirección es 0x68 (que se volvería 0
 #define regADCI2C_paraCanal2 0xB0 // 1 01 1 0000
 #define regADCI2C_paraCanal3 0xD0 // 1 10 1 0000
 #define regADCI2C_paraCanal4 0xF0 // 1 11 1 0000
+
+/*Basado en https://www.electronicaembajadores.com/Datos/pdf1/sm/smci/ads1015.pdf */
+#define ADCI2CADAFRUIT_AADR 0x48 /* La dirección puede ser 1001000 si a GND y 1001001 si conectado pin A0 a VCC */
+#define ADCI2CADAFRUIT_CONFIGADDR 0x01 /* La dir del reg de configuracion */
+#define ADCI2CADAFRUIT_CONFIGMSB 0x04 /* 0b00000100 MSB of the Config register */
+#define ADCI2CADAFRUIT_CONFIGLSB 0x83 /* 0b10000011 LSB of the Config register */
+#define ADCI2CADAFRUIT_CONVADDR 0X00 /* 0b00000000 registro de la conversión */
+#define ADCI2CADAFRUIT_CONFIGREGMUXA0 0x42
+#define ADCI2CADAFRUIT_CONFIGREGMUXA1 0x52
+#define ADCI2CADAFRUIT_CONFIGREGMUXA2 0x62
+#define ADCI2CADAFRUIT_CONFIGREGMUXA3 0x72
+/* primero hay un 0 de estado operativo, 100 es analog 0 y AInn = GND
+101 es AN1
+110 es AN2
+111 es AN3
+Luego 001 para +-4.096 V, 0 para modo continuo, 100 para 1600 SPS, luego 0 0 0 11 para otras opciones por defecto
+Por lo tanto tenemos
+01000010 10000011
+01010010 10000011
+01100010 10000011
+01110010 10000011
+*/
 
 #define LUZ_SENSOR_ADDR 0x10 /*Dir sensor luminosidad*/
 #define LUZ_REG_ADDR 0x04    /*Dir registro de luminosidad es 0x04*/
@@ -405,15 +318,12 @@ int estadoTimonExterno = 1; // Estado del timon externo, 0 -babor, 1 - inicial o
 
 int s_reset_state = 0; // tiempo hasta resetear. 0 es que no se resetea
 
-int voltajeHidro = 0; // Voltaje generado por las turbinas TO-DO en modelo final, borrar
-
 int voltajeSolar = 0; // Voltaje generado por el panel solar del globo
 
 int ozonoBabor = 0; // Ozono detectado por el sensor de babor
 int ozonoEstribor = 0; // Ozono detectado por el sensor de estribor
 int ozonoTrasFiltro = 0; // Ozono detectado tras el filtro activo de carbono
 
-int datoI2CCO2legible = 0; // Concentracion de quimicos en el agua, usamos el sensor de CO2 como mock TO-DO BORRAR
 int temperaturaAtmos = 0; // Temperatura atmosferica en grados centigrados.
 int humedadAtmos = 0; // Humedad relativa en %. Va de 0 a 100
 
@@ -424,17 +334,17 @@ int gpsdateday = 1;
 int gpstimhour = 1;
 int gpstimminute = 0;
 int gpstimsecond = 0;
-int gpslatitude = 0;
-int gpslongitude = 0;
-int gpsaltitude = 0;
-int gpsspeed = 0;
+double gpslatitude = 0.0;
+double gpslongitude = 0.0;
+double gpsaltitude = 0.0;
+double gpsspeed = 0.0;
+double gpscourse = 0.0;
 
-int gpslatitudeAnt = 0;
-int gpslongitudeAnt = 0;
-int gpsaltitudeAnt = 0;
-int gpsspeedAnt = 0;
-
-int datoI2CFotonlegible = 0; // Concentración de químicos en el algua filtrada, usamos el sensor de luz como mock TO-DO BORRAR
+double gpslatitudeAnt = 0.0;
+double gpslongitudeAnt = 0.0;
+double gpsaltitudeAnt = 0.0;
+double gpsspeedAnt = 0.0;
+double gpscourseAnt = 0.0;
 
 // ADC
 
@@ -445,11 +355,11 @@ static esp_adc_cal_characteristics_t adc2_chars;
 static esp_adc_cal_characteristics_t adc3_chars; // TO-DO comprobar?
 static esp_adc_cal_characteristics_t adc4_chars; // TO-DO comprobar?
 
-// I2C CO2
+// I2C
 
 static i2c_port_t i2c_master_port = I2C_MASTER_NUM;
 
-uint8_t data[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Para sensor I2C CO2 - tomamos los 8 bytes pero solo necesitamos los 2 primeros
+uint8_t data[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Para sensor I2C - tomamos los 8 bytes pero solo necesitamos los 2 primeros
 
 // LEDes
 
@@ -553,6 +463,181 @@ static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_ba
     }
 }
 
+/*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
+void init_uart(void)
+{
+    const uart_config_t uart_config = {
+        .baud_rate = 9600,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_APB,
+    };
+
+    // We won't use a buffer for sending data.
+    uart_driver_install(UART, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+    uart_param_config(UART, &uart_config);
+    uart_set_pin(UART, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
+
+double convert_num_fixed(double num) {
+    int grados = (int) num / 100;
+    double minutos = num - (grados * 100);
+    num = grados + (minutos/60);
+    return num;
+}
+
+static void parse(char * line) {
+    
+    switch(minmea_sentence_id(line, false)) {
+
+        case MINMEA_SENTENCE_GGA: {
+            //ESP_LOGI(tag, "GGA");
+            struct minmea_sentence_gga frame_gga;
+            if (minmea_parse_gga(&frame_gga, line)) {
+                /*
+                ESP_LOGI(tag, "$xxGGA: Latitude:Longitude %f:%f Time: %d:%d:%d\n",
+                         minmea_tofloat(&frame_gga.latitude),
+                         minmea_tofloat(&frame_gga.longitude),
+                         frame_gga.time.hours,
+                         frame_gga.time.minutes,
+                         frame_gga.time.seconds);
+                */
+              
+                double lat = convert_num_fixed(((double) minmea_tofloat(&frame_gga.latitude)));
+                double lon = convert_num_fixed(((double) minmea_tofloat(&frame_gga.longitude)));
+                if (isnan(lat))
+                    lat = 0;
+                if (isnan(lon))
+                    lon = 0;
+                ESP_LOGI(TAG, "LAT, LON: %f, %f", lat, lon);
+
+                gpslatitudeAnt = gpslatitude;
+                gpslongitudeAnt = gpslongitude;
+
+                gpslatitude = lat;
+                gpslongitude = lon;
+
+            }
+            else {
+                ESP_LOGI(TAG, "$xxGGA sentence is not parsed\n");
+            }
+        } break;
+
+        case MINMEA_SENTENCE_RMC: {
+            struct minmea_sentence_rmc frame;
+            if (minmea_parse_rmc(&frame, line)) {
+                printf("$RMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
+                        frame.latitude.value, frame.latitude.scale,
+                        frame.longitude.value, frame.longitude.scale,
+                        frame.speed.value, frame.speed.scale);
+                printf("$RMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d\n",
+                        minmea_rescale(&frame.latitude, 1000),
+                        minmea_rescale(&frame.longitude, 1000),
+                        minmea_rescale(&frame.speed, 1000));
+                printf("$RMC floating point degree coordinates and speed: (%f,%f) %f\n",
+                        minmea_tocoord(&frame.latitude),
+                        minmea_tocoord(&frame.longitude),
+                        minmea_tofloat(&frame.speed));
+                
+                // TO-DO ver si nos interesa solo tomarlo de la primera trama GGA
+                // TO-DO borrar luego
+                //gpslatitudeAnt = gpslatitude;
+                //gpslongitudeAnt = gpslongitude;
+                //gpslatitude = minmea_tocoord(&frame.latitude);
+                //gpslongitude = minmea_tocoord(&frame.longitude);
+
+                gpscourseAnt = gpscourse;
+                gpscourse = minmea_tofloat(&frame.course);
+                gpsspeedAnt = gpsspeed;
+                gpsspeed = minmea_tofloat(&frame.speed);
+            }
+        } break;
+        /* Usado solo para saber si detecto satélites */
+        case MINMEA_SENTENCE_GSV: {
+            struct minmea_sentence_gsv frame;
+            if (minmea_parse_gsv(&frame, line)) {
+                printf("$GSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
+                printf("$GSV: satellites in view: %d\n", frame.total_sats);
+                for (int i = 0; i < frame.total_sats; i++)
+                    printf("$GSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
+                        frame.sats[i].nr,
+                        frame.sats[i].elevation,
+                        frame.sats[i].azimuth,
+                        frame.sats[i].snr);
+            }
+        } break;
+
+        default:
+            //ESP_LOGI(tag, "DEFAULT");
+            //ESP_LOGD(tag, "Sentence - other");
+            break;
+    }
+}
+
+
+static void parse_line(char *line)
+{
+    char *p;
+    int i;
+    for (i = 1, p = strtok(line,"\n"); p != NULL; p = strtok(NULL,"\n"), i++) {
+        //printf("Output%u=%s;\n", i, p);
+        //ESP_LOGI(TAG, "%u>>>>>>>>>>>>>>>> %s",i , p);
+        parse(p);
+    }
+    //ESP_LOGI(TAG, "--------------------------------------------------------------");
+}
+
+static void rx_task(void *arg)
+{
+    static const char *RX_TASK_TAG = "RX_TASK";
+    esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
+
+    esp_gps_t *esp_gps = calloc(1, sizeof(esp_gps_t));
+    esp_gps->buffer = calloc(1, RX_BUF_SIZE);
+#if CONFIG_NMEA_STATEMENT_GSA
+    esp_gps->all_statements |= (1 << STATEMENT_GSA);
+#endif
+#if CONFIG_NMEA_STATEMENT_GSV
+    esp_gps->all_statements |= (1 << STATEMENT_GSV);
+#endif
+#if CONFIG_NMEA_STATEMENT_GGA
+    esp_gps->all_statements |= (1 << STATEMENT_GGA);
+#endif
+#if CONFIG_NMEA_STATEMENT_RMC
+    esp_gps->all_statements |= (1 << STATEMENT_RMC);
+#endif
+#if CONFIG_NMEA_STATEMENT_GLL
+    esp_gps->all_statements |= (1 << STATEMENT_GLL);
+#endif
+#if CONFIG_NMEA_STATEMENT_VTG
+    esp_gps->all_statements |= (1 << STATEMENT_VTG);
+#endif
+
+    ESP_LOGI(TAG, "Inicio rx del esp_gps");
+
+    while (1) {
+        int length = 0;
+        ESP_ERROR_CHECK(uart_get_buffered_data_len(UART, (size_t*)&length));
+        length = uart_read_bytes(UART, esp_gps->buffer, RX_BUF_SIZE, 100 / portTICK_PERIOD_MS);
+
+        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
+
+        /* make sure the line is a standard string TO-DO*/
+        esp_gps->buffer[length] = '\0';
+        /* Send new line to handle */
+        ESP_LOGI(RX_TASK_TAG, "Inicio decoding:");
+        //if (gps_decode(esp_gps, length + 1) != ESP_OK) {
+        //    ESP_LOGW(RX_TASK_TAG, "GPS decode line failed");
+        //}
+
+        parse_line((char *)esp_gps->buffer);
+        //free(data);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
+
 /*MOTORES*/
 
 static void blink_motorAspirador(void)
@@ -652,76 +737,10 @@ static esp_err_t i2c_master_init(SSD1306_t *dev, int16_t sda, int16_t scl, int16
     dev->_flip = false;
     return ESP_OK;
 }
-/**
- * @brief Read a sequence of bytes from a sensor register
- */
-static esp_err_t CO2_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len) // Los dispositivos que requieren de clock stretching no son soportados por ESP32 bien, cambiamos a un tercer sensor
-{
 
-    uint8_t dato[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // Primero hacemos que el sensor nos lea el comando
-    ESP_ERROR_CHECK(i2c_master_start(cmd));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | READ_BIT, ACK_VAL));
-
-    int i = 0;
-    for (i = 0; i < len - 1; i++)
-    {
-        ESP_ERROR_CHECK(i2c_master_read_byte(cmd, &dato[i], ACK_VAL));
-    }
-    ESP_ERROR_CHECK(i2c_master_read_byte(cmd, &dato[len - 1], NACK_VAL));
-    ESP_ERROR_CHECK(i2c_master_stop(cmd));
-
-    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    i2c_cmd_link_delete(cmd);
-    if (ret == ESP_OK)
-    {
-        for (int i = 0; i < len; i++)
-        {
-            printf("0x%02x ", dato[i]);
-            if ((i + 1) % 16 == 0)
-            {
-                printf("\r\n");
-            }
-        }
-        if (len % 16)
-        {
-            printf("\r\n");
-        }
-    }
-    else if (ret == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
-    else
-    {
-        ESP_LOGW(TAG, "Read failed");
-    }
-    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
-    // i2c_driver_delete(i2c_master_port);
-
-    esp_log_buffer_hex(TAG, dato, 9);
-    datoI2CCO2legible = dato[0] * 256 + dato[1];
-    ESP_LOGI(TAG, "El CO2 me sale %X", datoI2CCO2legible);
-    return ESP_OK;
-}
-
-/**
+/*
  * ajustarValoresOzono
- * Esta función toma la lectura de ozono y la corrige utilizando la fórmula del divisor de tensión
+ * @brief Esta función toma la lectura de ozono y la corrige utilizando la fórmula del divisor de tensión
  * 1º Obtiene la resistencia dada por el valor de lectura obtenido
  * 2º Tomando humedad y temperatura, ajusta la resistencia
  * 3º Recalcula de nuevo empleando el divisor de tensión
@@ -861,22 +880,7 @@ static esp_err_t O3_ZMOD4510_register_read(uint8_t slave_addr, uint8_t reg_addr,
     ESP_LOGI(TAG, "Lectura de ozono Renesas me sale %X", datoozono);
     return ESP_OK;
 }
-int ADC12C_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len)
-{
-
-    uint8_t dato[3] = {0, 0, 0}; // En modo de 12 bits nos devuelve 3 bytes, 2 de lectura y uno de configuración
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // Primero hacemos que el sensor nos lea el comando
-    ESP_ERROR_CHECK(i2c_master_start(cmd));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_stop(cmd));
-
-    esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
-
-    i2c_cmd_link_delete(cmd);
+void miESPes(esp_err_t retA){
     if (retA == ESP_OK)
     {
         ESP_LOGI(TAG, "Logre llamar al modulo ADC12C y darle un comando");
@@ -902,6 +906,135 @@ int ADC12C_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len)
         ESP_LOGW(TAG, "Read failed");
     }
 //    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+}
+
+/* ADC de adafruit*/
+int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_t input_addr, uint8_t config_LSB, uint8_t reg_addr, size_t len)
+{
+
+    uint8_t dato[3] = {0, 0, 0}; // En modo de 12 bits nos devuelve 3 bytes, 2 de lectura y uno de configuración
+
+    // Primero configuramos el ADC para que nos lea la entrada que queremos
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    // Para ello primero buscamos la dirección y luego le doy el registro al que escribir
+    ESP_ERROR_CHECK(i2c_master_start(cmd));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_to_addr, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, input_addr, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, config_LSB, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd));
+
+    esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+    miESPes(retA);
+    i2c_cmd_link_delete(cmd);
+
+    vTaskDelay(pdMS_TO_TICKS(20)); // Giving extra time so ADC works
+
+    i2c_cmd_handle_t cmd2 = i2c_cmd_link_create();
+    // Ahora le pedimos leer de reg_addr
+    ESP_ERROR_CHECK(i2c_master_start(cmd2));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd2, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd2, reg_addr, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd2));
+
+    esp_err_t retB = i2c_master_cmd_begin(i2c_master_port, cmd2, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+    miESPes(retB);
+    i2c_cmd_link_delete(cmd2);
+
+    // Y nos devuelve el resultado
+    i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
+    ESP_ERROR_CHECK(i2c_master_start(cmd3));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, (slave_addr << 1) | READ_BIT, ACK_VAL));
+    int i = 0;
+    for (i = 0; i < len - 1; i++)
+    {
+        ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[i], ACK_VAL));
+    }
+    ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[len - 1], NACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd3));
+
+    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd3, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+
+    i2c_cmd_link_delete(cmd3);
+    if (ret == ESP_OK)
+    {
+//        ESP_LOGI(TAG, "Recibi dato ozono ADC Adafruit");
+        for (int i = 0; i < len; i++)
+        {
+//            printf("0x%02x ", dato[i]);
+            if ((i + 1) % 16 == 0)
+            {
+                printf("\r\n");
+            }
+        }
+        if (len % 16)
+        {
+            printf("\r\n");
+        }
+    }
+    else
+    {
+        miESPes(ret);
+    }
+    
+    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
+
+    esp_log_buffer_hex(TAG, dato, len);
+    int result = (int) (dato[0] * 256 + dato[1]); // Según datasheet, el MSB va primero
+
+    ESP_LOGI(TAG, "Lectura de ADC I2C adafruit me sale %d ", result);
+
+    return result;
+}
+
+void miEspADCes(esp_err_t retA){
+    if (retA == ESP_OK)
+    {
+        ESP_LOGI(TAG, "Logre llamar al modulo ADC12C y darle un comando");
+    }
+    else if (retA == ESP_ERR_TIMEOUT)
+    {
+        ESP_LOGW(TAG, "Bus is busy");
+    }
+    else if (retA == ESP_ERR_INVALID_ARG)
+    {
+        ESP_LOGW(TAG, "Parameter error");
+    }
+    else if (retA == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
+    }
+    else if (retA == ESP_FAIL)
+    {
+        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+    }
+    else
+    {
+        ESP_LOGW(TAG, "Read failed");
+    }
+    // ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+}
+
+/* TO-DO BORRAR LO DE ABAJO*/
+int ADC12C_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len)
+{
+
+    uint8_t dato[3] = {0, 0, 0}; // En modo de 12 bits nos devuelve 3 bytes, 2 de lectura y uno de configuración
+
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    // Primero hacemos que el sensor nos lea el comando
+    ESP_ERROR_CHECK(i2c_master_start(cmd));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
+    ESP_ERROR_CHECK(i2c_master_stop(cmd));
+
+    esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
+    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+
+    i2c_cmd_link_delete(cmd);
+    miEspADCes(retA);
 
     i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
     ESP_ERROR_CHECK(i2c_master_start(cmd3));
@@ -933,35 +1066,17 @@ int ADC12C_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len)
             printf("\r\n");
         }
     }
-    else if (ret == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
     else
     {
-        ESP_LOGW(TAG, "Read failed");
+        miEspADCes(ret);
     }
     ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
     esp_log_buffer_hex(TAG, dato, len);
     uint8_t restoMSB = dato[0]%16; // En modo 12-bit los 4 primeros bits del MSB son repeticiones del MSB, solo nos interesan entonces los otros 4 bits
     int result = (int) 0.001 * (restoMSB * 256 + dato[1])/(2-1) * VOLTREFDATASHEET / 2048.0; // Según datasheet, multiplicar el resultado por el LSB y dividir por el factor de ganancia, que en este caso es 1, además hay que tener en cuenta que 2048 ahora son 5V
-    //temperaturaAtmos = -45 + (int) 175 * (dato[0] * 256 + dato[1])/((double) 65536-1); // Este sensor manda primero el MSB y luego el LSB, y eso se debe convertir a las unidades
-    //humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
 
-    ESP_LOGI(TAG, "Lectura de ADC me sale %d ", result);
+    ESP_LOGI(TAG, "Lectura de ADC I2C me sale %d ", result);
     //return ESP_OK;
     return result;
 }
@@ -1135,12 +1250,10 @@ static esp_err_t register_read_commando(uint8_t slave_addr, uint8_t reg_addr, si
         ESP_LOGW(TAG, "Read failed");
     }
     ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
-    // i2c_driver_delete(i2c_master_port);
 
     esp_log_buffer_hex(TAG, dato, 2);
-    datoI2CFotonlegible = dato[1] * 256 + dato[0];
-    // free(dato);
-    ESP_LOGI(TAG, "El Lumen me sale %X", datoI2CFotonlegible);
+//    datoI2CFotonlegible = dato[1] * 256 + dato[0];
+//    ESP_LOGI(TAG, "El Lumen me sale %X", datoI2CFotonlegible);
     return ESP_OK;
 }
 
@@ -1157,7 +1270,7 @@ static esp_err_t iniciar_sensorLuz(uint8_t slave_addr, uint8_t reg_addr, size_t 
     ESP_ERROR_CHECK(i2c_master_start(cmd));
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_CHECK_EN));
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x00, ACK_CHECK_EN)); // Select the 0x00 register
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x42, ACK_CHECK_EN)); // Write on the 0x00 register lowThreshold 10000, highThreshols 20000 e InteeruptEnable 1 0x0843. El LSB
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x42, ACK_CHECK_EN)); // Write on the 0x00 register lowThreshold 10000, highThreshols 20000 e InterruptEnable 1 0x0843. El LSB
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x08, ACK_CHECK_EN)); // El MSB
     ESP_ERROR_CHECK(i2c_master_stop(cmd));
 
@@ -1259,9 +1372,6 @@ static esp_err_t iniciar_sensorLuz(uint8_t slave_addr, uint8_t reg_addr, size_t 
     {
         ESP_LOGW(TAG, "Read failed");
     }
-    // register_read_commando(slave_addr, 0x00, 2);
-    // register_read_commando(slave_addr, 0x01, 2);
-    // register_read_commando(slave_addr, 0x02, 2);
 
     return ESP_OK;
 }
@@ -1323,13 +1433,7 @@ static void mqtt_app_start(void)
 {
     // Crear json que se quiere enviar al ThingsBoard
     cJSON *root = cJSON_CreateObject();
-    /*
-    cJSON_AddNumberToObject(root, "energiaSolar", voltajeSolar);      // En la telemetría de Thingsboard aparecerá
-    cJSON_AddNumberToObject(root, "energiaHidraulica", voltajeHidro); // En la telemetría de Thingsboard aparecerá
-    cJSON_AddNumberToObject(root, "co2I2C", datoI2CCO2legible);       // En la telemetría de Thingsboard aparecerá lo sacado del I2C
-    cJSON_AddNumberToObject(root, "luzI2C", datoI2CFotonlegible);     // En la telemetría de Thingsboard aparecerá lo sacado del I2C
-    cJSON_AddNumberToObject(root, "botonDisplay", s_switch_state);    // En la telemetría de Thingsboard aparecerá como valor true/false
-    */
+
     cJSON_AddNumberToObject(root, "ozonoBabor", ozonoBabor);                       // En p.p.m.
     cJSON_AddNumberToObject(root, "ozonoEstribor", ozonoEstribor);
     cJSON_AddNumberToObject(root, "ozonoTrasFiltro", ozonoTrasFiltro);
@@ -1341,7 +1445,8 @@ static void mqtt_app_start(void)
     cJSON_AddNumberToObject(root, "latitudGNSS", gpslatitude);                     // Grados
     cJSON_AddNumberToObject(root, "longitudGNSS", gpslongitude);
     cJSON_AddNumberToObject(root, "altitudGNSS", gpsaltitude);
-    cJSON_AddNumberToObject(root, "velocidadGNSS", gpsspeed);
+    cJSON_AddNumberToObject(root, "velocidadGNSS", gpsspeed);                      // Nudos
+    cJSON_AddNumberToObject(root, "orientacionGNSS", gpscourse);                   // Grados
 
     char *post_data = cJSON_PrintUnformatted(root);
     // Enviar los datos
@@ -1371,7 +1476,7 @@ static bool adc_calibration_init(void)
     {
         cali_enable = true;
         esp_adc_cal_characterize(ADC_UNIT_1, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc1_chars);
-        // TO-DO si usamos un solo módul oadc no deberíamos comentar esto?
+        // TO-DO si usamos un solo módulo adc no deberíamos comentar esto?
         esp_adc_cal_characterize(ADC_UNIT_2, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc2_chars);
     }
     else
@@ -1419,7 +1524,7 @@ char *cutoff(const char *str, int from, int to)
     memcpy(cut, fromit, to);
     return begin;
 }
-
+/* TO-DO Esto debería centralizarse en algún otro dispositivo, nuestra aspiradora estará aspirando y no hay que saturar el GSM o fundirnos los datos móviles */
 int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
 {
     if (len)
@@ -1546,12 +1651,12 @@ int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t l
                                                     sh2lib_do_get(handle, str, handle_echo_response);
                                                     s_reset_state = 20;
                                                 }
-                                                else if (strcmp(auxMensaje, cmd4) == 0)
+                                                /*else if (strcmp(auxMensaje, cmd4) == 0)
                                                 {
                                                     sprintf(str, "%s&text=%s : %s: %s Vsolar = %d, Vhidro = %d, Tox pre-filtro = %d, Tox post-filtro = %d. SwitchDisplay = %d", POSTUPDATES, auxMensaje, UNIVERSITY, cmd4Rep, voltajeSolar, voltajeHidro, datoI2CCO2legible, datoI2CFotonlegible, s_switch_state);
                                                     sh2lib_do_get(handle, str, handle_echo_response);
                                                     s_reset_state = 20;
-                                                }
+                                                }*/
                                                 // Las preguntas
                                                 else if (strcmp(auxMensaje, cmdP1) == 0)
                                                 {
@@ -1584,18 +1689,12 @@ int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t l
                                         }
                                         free(postman_data);
                                     }
-
-                                    // cJSON_Delete(elChat);
-                                    // cJSON_Delete(miId);
                                 }
                                 else
                                     printf("No se encuentra chat :/");
                             }
                         }
-                        // cJSON_Delete(elem);
                     }
-                    // cJSON_Delete(parameters);
-                    // cJSON_Delete(parameter);
                 }
                 else
                     printf("Algo va mal con el resultado");
@@ -1713,6 +1812,7 @@ static void http2_task(void *args)
 }
 
 /* An HTTP GET handler */
+/* TO-DO AJUSTAR EN LA VERSIÓN FINAL, NO ES NECESARIO EXCEPTO PARA RESETEAR A LA PARTICIÓN DE LA OTA*/
 static esp_err_t root_get_handler(httpd_req_t *req)
 {
     char mensajito[494];
@@ -1743,7 +1843,7 @@ static esp_err_t root_get_handler(httpd_req_t *req)
             sprintf(estadoSwitch, "OFF");
         }
 
-        sprintf(mensajito, "<h1> Servidor Web </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/on'><button style='height:50px;width:100px'>ON</button></a></p> <p><a href='/off'><button style='height:50px;width:100px'>OFF</button></a></p><p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p><h1>Display switch %s</h1><h1> V sol (mV): %d</h1><h1> V hidro (mV): %d</h1><h1> Toxinas pre-filtro (ppm): %d</h1><h1> Toxinas post-filtro (ppm): %d</h1>", estadoSwitch, voltajeSolar, voltajeHidro, datoI2CCO2legible, datoI2CFotonlegible);
+//        sprintf(mensajito, "<h1> Servidor Web </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/on'><button style='height:50px;width:100px'>ON</button></a></p> <p><a href='/off'><button style='height:50px;width:100px'>OFF</button></a></p><p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p><h1>Display switch %s</h1><h1> V sol (mV): %d</h1><h1> V hidro (mV): %d</h1><h1> Toxinas pre-filtro (ppm): %d</h1><h1> Toxinas post-filtro (ppm): %d</h1>", estadoSwitch, voltajeSolar, ozonoEstribor, ozonoBabor, datoI2CFotonlegible);
 
         mess = strcat(mensajito, finDePagina);
     }
@@ -1854,14 +1954,6 @@ static const httpd_uri_t on = {
     .method = HTTP_GET,
     .handler = buttON_get_handler};
 
-/*
-#define BOT_TOKEN tokenBotUCAEP
-const unsigned long BOT_MTBS = 1000; // mean time between scan messages
-WiFiClientSecure secured_client;
-UniversalTelegramBot bot(BOT_TOKEN, secured_client);
-unsigned long bot_lasttime; // last time messages' scan has been done
-
-*/
 static httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
@@ -1986,7 +2078,8 @@ void backtofactory()
     }
 }
 
-// Configuración de los dos pines analógicos
+// Configuración de los 4 pines analógicos
+// TO-DO AJUSTAR A SOLO 1 PIN ANALÓGICO EN CUANTO LOS ADC 12C FUNCIONEN
 static void configure_analog(void)
 {
     ESP_LOGI(TAG, "Configuring analog pins");
@@ -2007,6 +2100,8 @@ static void configure_analog(void)
     gpio_set_direction(PIN_ANALOG4, GPIO_MODE_INPUT);
 }
 
+/* TO-DO ESTO SE BORRA, NO TENEMOS NI DISPLAY (QUIÉN LO VA A VER A 100 M DE ALTURA, SOLO NOS VALE PARA ARRANCAR, SI ACASO ENTONCES LO AJUSTAS PARA UN MANUAL DE USUARIO)
+Y EL SLEEP EN EL AIRE ES SUICIDIO */
 void sleepDelDisplay(void)
 {
 #ifdef CONFIG_EXAMPLE_EXT1_WAKEUP
@@ -2179,7 +2274,6 @@ void app_main(void)
 
     // ADC2 config
     //original ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-    // TO-DO ver si con adc1_config_... va mejor
 #if CONFIG_IDF_TARGET_ESP32     
     ESP_ERROR_CHECK(adc1_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
     // ADC3 config
@@ -2217,7 +2311,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     /*
-     * Cosas del Sleep TO-DO
+     * Cosas del Sleep TO-DO AJUSTAR/BORRAR
      */
     // deQueMeLevante(sleep_time_ms);
     //  Sleep segun el boton del display
@@ -2244,6 +2338,7 @@ void app_main(void)
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
      * examples/protocols/README.md for more information about this function.
      */
+    // TO-DO encontrar una forma de poder conectar a wi-fi sin que sea obligatorio conectar al wi-fi antes de que funcionen las cosas
     ESP_ERROR_CHECK(example_connect());
 
     /*
@@ -2280,7 +2375,8 @@ void app_main(void)
 
     //Start test task
     // GPS
-    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL);
+    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL); // 8192, no 1024 * 2
+/* FIN DEL GITHUB DE OTRO COMPAÑERO*/
 
     /*
      * Bucle infinito TO-DO mejorar con Tasks?
@@ -2310,7 +2406,6 @@ void app_main(void)
         }
         else
         {
-//            ESP_LOGI(TAG, "Switch display: OFF");
             s_switch_state = false;
             ssd1306_clear_screen(&dev, false);
         }
@@ -2335,7 +2430,7 @@ void app_main(void)
             }
         }
 
-        /* FASE 1: LECTURA ADC DE SENSORES MIKROE */
+        /* FASE 1: LECTURA ADC DE SENSORES MIKROE TO-DO AJUSTAR A I2C*/
 
 //        ESP_LOGI(TAG, "Procedo a medir ADC");
         adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
@@ -2424,9 +2519,13 @@ void app_main(void)
 //        ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
         /* TO-DO COMPROBAR QUE ESTO FUNCIONA Y ENTONCES COMENTA EL ADC INTERNO excepto para solar*/
-        ozonoBabor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal1, 3);
-        ozonoEstribor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal2, 3);
-        ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
+    //    ozonoBabor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal1, 3);
+    //    ozonoEstribor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal2, 3);
+    //    ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
+
+        ozonoBabor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ozonoEstribor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ozonoTrasFiltro = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA2, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
 
         // TO-DO BORRAR?
         //ESP_LOGI(TAG, "Procedo a leer I2C de Luminosidad");
