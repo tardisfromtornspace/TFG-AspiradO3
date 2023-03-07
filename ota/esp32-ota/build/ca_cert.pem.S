@@ -1,4 +1,4 @@
-/* * Data converted from C:/ASL/Universidad/4to_curso/SBC/ExamplesTest/Thingsboardv2/esp32-ota/server_certs/ca_cert.pem
+/* * Data converted from C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/ota/esp32-ota/server_certs/ca_cert.pem
  * (null byte appended)
  */
 .data

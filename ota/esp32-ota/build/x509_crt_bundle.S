@@ -1,4 +1,4 @@
-/* * Data converted from C:/ASL/Universidad/4to_curso/SBC/ExamplesTest/Thingsboardv2/esp32-ota/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/ota/esp32-ota/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 .section .rodata.embedded

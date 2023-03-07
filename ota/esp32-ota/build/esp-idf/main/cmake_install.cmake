@@ -1,4 +1,4 @@
-# Install script for directory: C:/ASL/Universidad/4to_curso/SBC/ExamplesTest/Thingsboardv2/esp32-ota/main
+# Install script for directory: C:/ASL/Universidad/4to_curso/TFG/Github/TFG-AspiradO3/ota/esp32-ota/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

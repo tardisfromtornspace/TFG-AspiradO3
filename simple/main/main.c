@@ -1843,7 +1843,7 @@ static esp_err_t root_get_handler(httpd_req_t *req)
             sprintf(estadoSwitch, "OFF");
         }
 
-//        sprintf(mensajito, "<h1> Servidor Web </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/on'><button style='height:50px;width:100px'>ON</button></a></p> <p><a href='/off'><button style='height:50px;width:100px'>OFF</button></a></p><p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p><h1>Display switch %s</h1><h1> V sol (mV): %d</h1><h1> V hidro (mV): %d</h1><h1> Toxinas pre-filtro (ppm): %d</h1><h1> Toxinas post-filtro (ppm): %d</h1>", estadoSwitch, voltajeSolar, ozonoEstribor, ozonoBabor, datoI2CFotonlegible);
+        sprintf(mensajito, "<h1> Acceso Web http a AspiradO3 </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p> <h1> V sol (mV): %d</h1> <h1> Ozono Estribor (ppm): %d</h1><h1> Ozono Babor (ppm): %d</h1><h1> Ozono tras filtros (ppm): %d</h1>", voltajeSolar, ozonoEstribor, ozonoBabor, ozonoTrasFiltro);
 
         mess = strcat(mensajito, finDePagina);
     }
@@ -1879,7 +1879,7 @@ static esp_err_t buttOFF_get_handler(httpd_req_t *req)
 }
 static esp_err_t buttReset_get_handler(httpd_req_t *req)
 {
-    s_reset_state = 30;
+    s_reset_state = 5;
     httpd_resp_set_hdr(req, "Location", "/");
     httpd_resp_set_status(req, "302");
     httpd_resp_set_type(req, "text/html");
