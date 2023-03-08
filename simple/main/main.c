@@ -134,7 +134,7 @@ static const char *TAG = "ServidorSimple";
 #define VOLTREFDATASHEET 5000
 
 /* GPS */
-#define TIME_ZONE (+8)   //Beijing Time TO-DO ajustar a tiempo de Europa Central
+#define TIME_ZONE (+0)   //Beijing Time TO-DO ajustar a tiempo de Europa Central
 #define YEAR_BASE (2000) //date in GPS starts from 2000
 
 #define UART_NUM_2_RXD_DIRECT_GPIO_NUM 16
@@ -155,7 +155,7 @@ static const char *TAG = "ServidorSimple";
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 #include "minmea.h" /*TO-DO pásalo al parser de nmea*/
 #define UART UART_NUM_2
-#define TXD_PIN 16
+#define TXD_PIN 16 // No es encesario TO-DO borrar si hace falta
 #define RXD_PIN 3 // 17
 static const int RX_BUF_SIZE = 4096;
 
@@ -214,7 +214,7 @@ Así, si lo pongo Adr0 = Adr1 = LOW => la dirección es 0x68 (que se volvería 0
 #define ADCI2CADAFRUIT_CONFIGMSB 0x04 /* 0b00000100 MSB of the Config register */
 #define ADCI2CADAFRUIT_CONFIGLSB 0x83 /* 0b10000011 LSB of the Config register */
 #define ADCI2CADAFRUIT_CONVADDR 0X00 /* 0b00000000 registro de la conversión */
-#define ADCI2CADAFRUIT_CONFIGREGMUXA0 0x42
+#define ADCI2CADAFRUIT_CONFIGREGMUXA0 0x42 /* Las 4 posibles salidas del ADC */
 #define ADCI2CADAFRUIT_CONFIGREGMUXA1 0x52
 #define ADCI2CADAFRUIT_CONFIGREGMUXA2 0x62
 #define ADCI2CADAFRUIT_CONFIGREGMUXA3 0x72
@@ -925,11 +925,11 @@ int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_
     ESP_ERROR_CHECK(i2c_master_stop(cmd));
 
     esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+    vTaskDelay(pdMS_TO_TICKS(50)); // Needs 1 ms to prepare
     miESPes(retA);
     i2c_cmd_link_delete(cmd);
 
-    vTaskDelay(pdMS_TO_TICKS(20)); // Giving extra time so ADC works
+    vTaskDelay(pdMS_TO_TICKS(50)); // Giving extra time so ADC works
 
     i2c_cmd_handle_t cmd2 = i2c_cmd_link_create();
     // Ahora le pedimos leer de reg_addr
@@ -939,7 +939,7 @@ int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_
     ESP_ERROR_CHECK(i2c_master_stop(cmd2));
 
     esp_err_t retB = i2c_master_cmd_begin(i2c_master_port, cmd2, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
+    vTaskDelay(pdMS_TO_TICKS(50)); // Needs 1 ms to prepare
     miESPes(retB);
     i2c_cmd_link_delete(cmd2);
 
@@ -2525,6 +2525,8 @@ void app_main(void)
     //    ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
         ESP_LOGI(TAG, "Procedo a leer I2C de ADCs ozono");
         ESP_LOGI(TAG, "Procedo a leer ADC 0");
+        
+        //int ozonoAux = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA3, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ozonoBabor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ESP_LOGI(TAG, "Procedo a leer ADC 1");
         ozonoEstribor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
