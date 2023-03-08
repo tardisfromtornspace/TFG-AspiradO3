@@ -982,7 +982,8 @@ int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_
     ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
     esp_log_buffer_hex(TAG, dato, len);
-    int result = (int) (dato[0] * 256 + dato[1]); // Según datasheet, el MSB va primero
+    int MSBsinSigno = dato[0] % 128; // El sistema usa valores por encima de 7F para valores negativos
+    int result = (int) ((MSBsinSigno * 256 + dato[1]) / 32752.0 * 4096); // Según datasheet, el MSB va primero. Para un rango de
 
     ESP_LOGI(TAG, "Lectura de ADC I2C adafruit me sale %d ", result);
 
@@ -2522,9 +2523,12 @@ void app_main(void)
     //    ozonoBabor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal1, 3);
     //    ozonoEstribor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal2, 3);
     //    ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
-
+        ESP_LOGI(TAG, "Procedo a leer I2C de ADCs ozono");
+        ESP_LOGI(TAG, "Procedo a leer ADC 0");
         ozonoBabor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ESP_LOGI(TAG, "Procedo a leer ADC 1");
         ozonoEstribor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ESP_LOGI(TAG, "Procedo a leer ADC 2");
         ozonoTrasFiltro = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA2, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
 
         // TO-DO BORRAR?
