@@ -2432,8 +2432,8 @@ void app_main(void)
 
         /* FASE 1: LECTURA ADC DE SENSORES MIKROE TO-DO AJUSTAR A I2C*/
 
-//        ESP_LOGI(TAG, "Procedo a medir ADC");
-        adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
+/*        ESP_LOGI(TAG, "Procedo a medir ADC");
+//        adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
 
 //        ESP_LOGI(TAG_CH[0][0], "raw  O3 babor data: %d", adc_raw[0][0]);
         if (cali_enable)
@@ -2491,7 +2491,7 @@ void app_main(void)
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
-
+*/
 #if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
         adc_raw[3][0] = adc1_get_raw(ADC4_EXAMPLE_CHAN0);
 #else
@@ -2501,7 +2501,7 @@ void app_main(void)
         } while (ret == ESP_ERR_INVALID_STATE);
         ESP_ERROR_CHECK(ret);
 #endif
-//        ESP_LOGI(TAG_CH[3][0], "raw voltaje Solar data: %d", adc_raw[3][0]);
+        ESP_LOGI(TAG_CH[3][0], "raw voltaje Solar data: %d", adc_raw[3][0]);
         if (cali_enable)
         {
 #if CONFIG_IDF_TARGET_ESP32
@@ -2510,15 +2510,15 @@ void app_main(void)
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc2_chars);
 #endif
             voltajeSolar = voltage;
-//            ESP_LOGI(TAG_CH[3][0], "cali voltaje Solar data: %d mV", voltage);
+            ESP_LOGI(TAG_CH[3][0], "cali voltaje Solar data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
 
-        /* FASE 2: LECTURA SE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
-//        ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
+        /* FASE 2: LECTURA DE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
+        ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
-        /* TO-DO COMPROBAR QUE ESTO FUNCIONA Y ENTONCES COMENTA EL ADC INTERNO excepto para solar*/
+        /* FASE 2.2 LECTURA OZONO I2C TO-DO COMPROBAR QUE ESTO FUNCIONA Y ENTONCES COMENTA EL ADC INTERNO excepto para solar*/
     //    ozonoBabor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal1, 3);
     //    ozonoEstribor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal2, 3);
     //    ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
