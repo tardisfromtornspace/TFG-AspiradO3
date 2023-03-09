@@ -756,7 +756,7 @@ static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura)
     ESP_LOGI(TAG, "La resistencia ajustada me sale %lf", resistenciaAjustada);
     double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/RESL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/RESL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET. 1.7 es un valor corrector
     ESP_LOGI(TAG, "La corrección de lectura me sale %lf", correccionLectura/1000);
-    return (int) 100 * (pow(E, -correccionLectura/1000 + 4) -1);
+    return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -correccionLectura/1000 + 4) -1))) ; // TO-DO Ajuste para no salirse de los 0-1000 ppm
 }
 
 // SENSOR DE O3 NO DE MIKROE TO-DO TO-DO HACER FUNCION INIT DEL SENSOR RENESAS SI ES NECESARIO
