@@ -133,9 +133,11 @@ static const char *TAG = "ServidorSimple";
 #define VOLTREF 5000 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref
 #define VOLTREFDATASHEET 5000
 
-/* GPS */
-#define TIME_ZONE (+0)   //Beijing Time TO-DO ajustar a tiempo de Europa Central
-#define YEAR_BASE (2000) //date in GPS starts from 2000
+#define CTRLZ 26 // Definir Ctrl+Z
+
+/* GPS y GSM */
+#define TIME_ZONE (+0)   // Tiempo del meridiano de Greenwich
+#define YEAR_BASE (2000) // Date in GPS starts from 2000
 
 #define UART_NUM_2_RXD_DIRECT_GPIO_NUM 16
 #define UART_GPIO3_DIRECT_CHANNEL UART_NUM_0
@@ -152,13 +154,14 @@ static const char *TAG = "ServidorSimple";
             .event_queue_size = 16         \
         }                                  \
     }
+
+#define SDSMSPIN "4095" // TO-DO ajustar al PIN correcto
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 #include "minmea.h" /*TO-DO pásalo al parser de nmea*/
 #define UART UART_NUM_2
-#define TXD_PIN 16 // No es encesario TO-DO borrar si hace falta
+#define TXD_PIN 16 // Necesario para cuando tengamos el SIM800
 #define RXD_PIN 3 // 17
 static const int RX_BUF_SIZE = 4096;
-
 
 /* LED */
 #define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
@@ -637,7 +640,68 @@ static void rx_task(void *arg)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
+/*Inicio GSM*/
+int sendData(const char* logName, const char* data)
+{
+    const int len = strlen(data);
+    const int txBytes = uart_write_bytes(UART, data, len);
+    ESP_LOGI(logName, "Wrote %d bytes", txBytes);
+    return txBytes;
+}
 
+static void tx_task(void *arg)
+{
+    static const char *TX_TASK_TAG = "TX_TASK";
+    esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
+
+    /* La tarjeta a lo mejor requiere de un PIN */
+    char mensajito[494];
+
+    char finDeMensaje[] = "";
+    const char *mess;
+
+    sprintf(mensajito, "AT+CPIN=%s", SDSMSPIN);
+    mess = strcat(mensajito, finDeMensaje); // TO-DO define PIN
+    sendData(TX_TASK_TAG, mess);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    while (1) {
+        sendData(TX_TASK_TAG, "Hello world"); // TO-DO reemplazar por el string de datos que me interesa (el de mqtt_start)
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+}
+/*
+void test_sim800_module()
+{
+  Serial2.println("AT");
+  updateSerial();
+  Serial.println();
+  Serial2.println("AT+CSQ");
+  updateSerial();
+  Serial2.println("AT+CCID");
+  updateSerial();
+  Serial2.println("AT+CREG?");
+  updateSerial();
+  Serial2.println("ATI");
+  updateSerial();
+  Serial2.println("AT+CBC");
+  updateSerial();
+}
+
+*/
+void send_SMS(const char* logName, const char* data){ // TO-DO para esto a lo mejor tener una segunda placa que leyese el SMS y luego por Wi-Fi comunicara los datos al Thingsboard
+    sendData(logName, "AT+CMGF=1"); // Configuring TEXT mode
+    sendData(logName, "AT+CMGS=\"+919804049270\"");//change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
+    sendData(logName, data);
+    // Enviar Ctrl+Z
+    //char mensajito[2];
+    //char finDeMensaje[] = "";
+    const char *mess = CTRLZ;
+    //sprintf(mensajito, "%c", CTRLZ);
+    //mess = strcat(mensajito, finDeMensaje);
+    sendData(logName, mess); // Ctrl +C according to the manual
+
+}
 /*MOTORES*/
 
 static void blink_motorAspirador(void)
@@ -2377,6 +2441,8 @@ void app_main(void)
     //Start test task
     // GPS
     xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL); // 8192, no 1024 * 2
+    // GSM
+    xTaskCreate(tx_task, "uart_tx_task", 8192, NULL, configMAX_PRIORITIES-3, NULL);
 /* FIN DEL GITHUB DE OTRO COMPAÑERO*/
 
     /*
