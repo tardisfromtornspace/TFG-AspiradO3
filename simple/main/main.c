@@ -97,6 +97,9 @@
 #include "ssd1306.h"
 #include "font8x8_basic.h"
 
+// Para motores
+#include "driver/mcpwm.h"
+
 /* A simple example that demonstrates how to create GET and POST
  * handlers and start an HTTPS server.
  */
@@ -107,12 +110,19 @@ static const char *TAG = "ServidorSimple";
 // WIP Arreglar conflicto con el LED
 // Motor Aspirador
 #define PIN_ASPIRADOR 21
+
 // Motor interno que redirige hacia adelante o atrás
-#define PIN_TIMON_INTERNO_A 18
-#define PIN_TIMON_INTERNO_R 19
-// Motor del timón externo - nos basamos en la capacidad de que el timón se reoriente automáticamente cuando el motor se apague gracias al flujo de aire.
-#define PIN_TIMON_EXTERNO_A 22
-#define PIN_TIMON_EXTERNO_R 23
+#define SERVOTIMONINTERNO_MIN_PULSEWIDTH_US (1000) // Minimum pulse width in microsecond
+#define SERVOTIMONINTERNO_MAX_PULSEWIDTH_US (2000) // Maximum pulse width in microsecond
+#define SERVOTIMONINTERNO_MAX_DEGREE        (45)   // Maximum angle in degree upto which servo can rotate (+-)
+
+// Motor del timón externo que gira de -90 a 90.
+#define SERVOTIMONEXTERNO_MIN_PULSEWIDTH_US (600) // Minimum pulse width in microsecond
+#define SERVOTIMONEXTERNO_MAX_PULSEWIDTH_US (2600) // Maximum pulse width in microsecond
+#define SERVOTIMONEXTERNO_MAX_DEGREE        (90)   // Maximum angle in degree upto which servo can rotate
+
+#define SERVO_PULSE_TIMONINTERNO        (18)   // GPIO connects to the PWM signal line
+#define SERVO_PULSE_TIMONEXTERNO        (19)   // GPIO connects to the PWM signal line
 
 
 /* Sensores ozono */
@@ -248,23 +258,14 @@ Por lo tanto tenemos
 
 // ADC Channels
 #if CONFIG_IDF_TARGET_ESP32
-#define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_6
-#define ADC2_EXAMPLE_CHAN0 ADC1_CHANNEL_7 // Usamos Wifi, no podemos usar el ADC2
-#define ADC3_EXAMPLE_CHAN0 ADC1_CHANNEL_4
 #define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
-static const char *TAG_CH[4][10] = {{"ADC1_CH6"}, {"ADC2_CH7"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
+static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 #else
 // TO-DO ver compatibilidad
-#define ADC1_EXAMPLE_CHAN0 ADC1_CHANNEL_6
-#define ADC2_EXAMPLE_CHAN0 ADC1_CHANNEL_7 // Usamos Wifi, no podemos usar el ADC2
-#define ADC3_EXAMPLE_CHAN0 ADC1_CHANNEL_4
 #define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
-static const char *TAG_CH[4][10] = {{"ADC1_CH6"}, {"ADC2_CH7"}, {"ADC2_CH4"}, {"ADC2_CH5"}};
+static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 #endif
 
-#define PIN_ANALOG 35
-#define PIN_ANALOG2 34
-#define PIN_ANALOG3 32
 #define PIN_ANALOG4 33
 
 // ADC Attenuation
@@ -316,8 +317,8 @@ static uint8_t s_led_state = 0; // Estado del led
 static uint8_t s_switch_state = 0; // Estado del switch TO-DO borrar en final
 
 static uint8_t s_aspirador_state = 0; // Estado del aspirador 0 - apagado, 1 - encendido
-int estadoTimonInterno = 1; // Estado del timon interno, 0 - posición levantada, 1- inicial o desconocido, 2 - posición bajada
-int estadoTimonExterno = 1; // Estado del timon externo, 0 -babor, 1 - inicial o centrado, 2 - estribor
+int estadoTimonInterno = 45; // Estado del timon interno, -45 posición levantada, 0 inicial o desconocido, 45 posición bajada
+int estadoTimonExterno = 0; // Estado del timon externo, [-90 0) babor, 0 inicial o centrado, (0 90] estribor
 
 int s_reset_state = 0; // tiempo hasta resetear. 0 es que no se resetea
 
@@ -351,12 +352,10 @@ double gpscourseAnt = 0.0;
 
 // ADC
 
-static int adc_raw[4][10];
+static int adc_raw[1][10];
 
 static esp_adc_cal_characteristics_t adc1_chars;
 static esp_adc_cal_characteristics_t adc2_chars;
-static esp_adc_cal_characteristics_t adc3_chars; // TO-DO comprobar?
-static esp_adc_cal_characteristics_t adc4_chars; // TO-DO comprobar?
 
 // I2C
 
@@ -710,36 +709,14 @@ static void blink_motorAspirador(void)
     gpio_set_level(PIN_ASPIRADOR, s_aspirador_state);
 }
 
-static void blink_motorTimon(gpio_num_t pin1, gpio_num_t pin2, int estado_grupo)
+static inline uint32_t convert_servo_90_angle_to_duty_us(int angle)
 {
-    /* Set the GPIO level according to the state (LOW or HIGH)*/
-    uint32_t sentido;
-    uint32_t sentido2;
-    switch (estado_grupo)
-    {
-    case 0:
-        ESP_LOGI(TAG, "BABOR");
-        sentido = true;
-        sentido2 = false;
-        break;
-    case 1:
-        ESP_LOGI(TAG, "FRENTE");
-        sentido = false;
-        sentido2 = false;
-        break;
-    case 2:
-        ESP_LOGI(TAG, "ESTRIBOR");
-        sentido = false;
-        sentido2 = true;
-        break;
-    default:
-        ESP_LOGI(TAG, "Other, AN ERROR PERHAPS");
-        sentido = false;
-        sentido2 = false;
-        break;
-    } 
-    gpio_set_level(pin1, sentido);
-    gpio_set_level(pin2, sentido2);
+    return (angle + SERVOTIMONINTERNO_MAX_DEGREE) * (SERVOTIMONINTERNO_MAX_PULSEWIDTH_US - SERVOTIMONINTERNO_MIN_PULSEWIDTH_US) / (2 * SERVOTIMONINTERNO_MAX_DEGREE) + SERVOTIMONINTERNO_MIN_PULSEWIDTH_US;
+}
+
+static inline uint32_t convert_servo_180_angle_to_duty_us(int angle)
+{
+    return (angle + SERVOTIMONEXTERNO_MAX_DEGREE) * (SERVOTIMONEXTERNO_MAX_PULSEWIDTH_US - SERVOTIMONEXTERNO_MIN_PULSEWIDTH_US) / (2 * SERVOTIMONEXTERNO_MAX_DEGREE) + SERVOTIMONEXTERNO_MIN_PULSEWIDTH_US;
 }
 
 // Motores de corriente continua, para el aspirador y posiblemente uno de los timones internos, AspiradO3
@@ -749,15 +726,6 @@ static void configure_motor_continuo(gpio_num_t pin)
     gpio_reset_pin(pin);
     /* Set the pin as a push/pull output */
     gpio_set_direction(pin, GPIO_MODE_OUTPUT);
-}
-
-static void configure_motor_continuo_doble(gpio_num_t pin1, gpio_num_t pin2)
-{
-    ESP_LOGI(TAG, "Configurando dos pines para un motor DC de 2 sentidos");
-    configure_motor_continuo(pin1);
-    configure_motor_continuo(pin2);
-    ESP_LOGI(TAG, "Configuración de motor de 2 pines completa");
-
 }
 
 // Switch, se usará para encender o apagar el LCD
@@ -2147,20 +2115,9 @@ void backtofactory()
 // TO-DO AJUSTAR A SOLO 1 PIN ANALÓGICO EN CUANTO LOS ADC 12C FUNCIONEN
 static void configure_analog(void)
 {
-    ESP_LOGI(TAG, "Configuring analog pins");
-    gpio_reset_pin(PIN_ANALOG);
-    /* Set the GPIO 34 as a push/pull output */
-    gpio_set_direction(PIN_ANALOG, GPIO_MODE_INPUT);
+    ESP_LOGI(TAG, "Configuring ESP32 analog pins");
 
-    gpio_reset_pin(PIN_ANALOG2);
-    /* Set the GPIO 32 as a push/pull output */
-    gpio_set_direction(PIN_ANALOG2, GPIO_MODE_INPUT);
-
-        gpio_reset_pin(PIN_ANALOG3);
-    /* Set the GPIO 32 as a push/pull output */
-    gpio_set_direction(PIN_ANALOG3, GPIO_MODE_INPUT);
-
-        gpio_reset_pin(PIN_ANALOG4);
+    gpio_reset_pin(PIN_ANALOG4);
     /* Set the GPIO 32 as a push/pull output */
     gpio_set_direction(PIN_ANALOG4, GPIO_MODE_INPUT);
 }
@@ -2290,13 +2247,23 @@ void app_main(void)
     gettimeofday(&now, NULL);
     int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
     /*
-     * Configurar periféricos, LED, motores, switch y los inputs analógicos
+     * Configurar periféricos, LED, motores y los inputs analógicos
      */
     configure_led();
     configure_motor_continuo(PIN_ASPIRADOR);
-    configure_motor_continuo_doble(PIN_TIMON_INTERNO_A, PIN_TIMON_INTERNO_R);
-    configure_motor_continuo_doble(PIN_TIMON_EXTERNO_A, PIN_TIMON_EXTERNO_R);
-    configure_switch();
+    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, SERVO_PULSE_TIMONINTERNO); // To drive a RC servo, one MCPWM generator is enough
+    mcpwm_gpio_init(MCPWM_UNIT_1, MCPWM0A, SERVO_PULSE_TIMONEXTERNO); // For the second RC servo
+
+    mcpwm_config_t pwm_config = {
+        .frequency = 50, // frequency = 50Hz, i.e. for every servo motor time period should be 20ms
+        .cmpr_a = 0,     // duty cycle of PWMxA = 0
+        .counter_mode = MCPWM_UP_COUNTER,
+        .duty_mode = MCPWM_DUTY_MODE_0,
+    };
+    mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config);
+    mcpwm_init(MCPWM_UNIT_1, MCPWM_TIMER_0, &pwm_config);
+
+    //configure_switch();
     configure_analog();
 
     // iniciar I2C
@@ -2335,19 +2302,12 @@ void app_main(void)
 
     // ADC1 config
     ESP_ERROR_CHECK(adc1_config_width(ADC_WIDTH_BIT_DEFAULT));
-    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC1_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-
     // ADC2 config
     //original ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
 #if CONFIG_IDF_TARGET_ESP32     
-    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-    // ADC3 config
-    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+    ESP_ERROR_CHECK(adc1_config_channel_atten(ADC4_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
 #else
-    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
-    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC3_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
+    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC4_EXAMPLE_CHAN0, ADC_EXAMPLE_ATTEN));
 #endif
 
 
@@ -2419,7 +2379,6 @@ void app_main(void)
     s_aspirador_state = true;
     blink_motorAspirador();
     // TO-DO TESTS DE LOS OTROS DOS MOTORES
-
 
     // Task mqtt? TO-DO?
     //  xTaskCreate(mqtt_app_start, "mqtt_send_data_0", 1024 * 2, (void *)0, 10, NULL);
@@ -2499,85 +2458,28 @@ void app_main(void)
 
         /* FASE 1: LECTURA ADC DE SENSORES MIKROE TO-DO AJUSTAR A I2C*/
 
-/*        ESP_LOGI(TAG, "Procedo a medir ADC");
-//        adc_raw[0][0] = adc1_get_raw(ADC1_EXAMPLE_CHAN0);
+        ESP_LOGI(TAG, "Procedo a medir ADC ESP32");
 
-//        ESP_LOGI(TAG_CH[0][0], "raw  O3 babor data: %d", adc_raw[0][0]);
+
+#if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo
+        adc_raw[0][0] = adc1_get_raw(ADC4_EXAMPLE_CHAN0);
+#else
+        do
+        {
+            ret = adc2_get_raw(ADC4_EXAMPLE_CHAN0, ADC_WIDTH_BIT_DEFAULT, &adc_raw[0][0]);
+        } while (ret == ESP_ERR_INVALID_STATE);
+        ESP_ERROR_CHECK(ret);
+#endif
+        ESP_LOGI(TAG_CH[0][0], "raw voltaje Solar data: %d", adc_raw[0][0]);
         if (cali_enable)
         {
+#if CONFIG_IDF_TARGET_ESP32
             voltage = esp_adc_cal_raw_to_voltage(adc_raw[0][0], &adc1_chars);
-            ozonoBabor = voltage;
-//            ESP_LOGI(TAG_CH[0][0], "cali O3 babor data: %d mV", voltage);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
-
-#if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
-        adc_raw[1][0] = adc1_get_raw(ADC2_EXAMPLE_CHAN0);
 #else
-        do
-        {
-            ret = adc2_get_raw(ADC2_EXAMPLE_CHAN0, ADC_WIDTH_BIT_DEFAULT, &adc_raw[1][0]);
-        } while (ret == ESP_ERR_INVALID_STATE);
-        ESP_ERROR_CHECK(ret);
-#endif
-//        ESP_LOGI(TAG_CH[1][0], "raw O3 estribor data: %d", adc_raw[1][0]);
-        if (cali_enable)
-        {
-#if CONFIG_IDF_TARGET_ESP32
-            voltage = esp_adc_cal_raw_to_voltage(adc_raw[1][0], &adc1_chars);
-#else
-            voltage = esp_adc_cal_raw_to_voltage(adc_raw[1][0], &adc2_chars);
-#endif
-            ozonoEstribor = voltage;
-//            ESP_LOGI(TAG_CH[1][0], "cali O3 estribor data: %d mV", voltage);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
-
-// TO-DO verificar que funcione con Mikroe, si no , pasa a bus SPI
-#if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
-        adc_raw[2][0] = adc1_get_raw(ADC3_EXAMPLE_CHAN0);
-#else
-        do
-        {
-            ret = adc2_get_raw(ADC3_EXAMPLE_CHAN0, ADC_WIDTH_BIT_DEFAULT, &adc_raw[2][0]);
-        } while (ret == ESP_ERR_INVALID_STATE);
-        ESP_ERROR_CHECK(ret);
-#endif
-        ESP_LOGI(TAG_CH[2][0], "raw O3 tras filtro data: %d", adc_raw[2][0]);
-        if (cali_enable)
-        {
-#if CONFIG_IDF_TARGET_ESP32
-            voltage = esp_adc_cal_raw_to_voltage(adc_raw[2][0], &adc1_chars);
-#else
-            voltage = esp_adc_cal_raw_to_voltage(adc_raw[2][0], &adc2_chars);
-#endif
-            ozonoTrasFiltro = voltage;
-            ESP_LOGI(TAG_CH[2][0], "cali O3 tras filtro data: %d mV", voltage);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
-*/
-#if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1
-        adc_raw[3][0] = adc1_get_raw(ADC4_EXAMPLE_CHAN0);
-#else
-        do
-        {
-            ret = adc2_get_raw(ADC4_EXAMPLE_CHAN0, ADC_WIDTH_BIT_DEFAULT, &adc_raw[3][0]);
-        } while (ret == ESP_ERR_INVALID_STATE);
-        ESP_ERROR_CHECK(ret);
-#endif
-        ESP_LOGI(TAG_CH[3][0], "raw voltaje Solar data: %d", adc_raw[3][0]);
-        if (cali_enable)
-        {
-#if CONFIG_IDF_TARGET_ESP32
-            voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc1_chars);
-#else
-            voltage = esp_adc_cal_raw_to_voltage(adc_raw[3][0], &adc2_chars);
+            voltage = esp_adc_cal_raw_to_voltage(adc_raw[0][0], &adc2_chars);
 #endif
             voltajeSolar = voltage;
-            ESP_LOGI(TAG_CH[3][0], "cali voltaje Solar data: %d mV", voltage);
+            ESP_LOGI(TAG_CH[0][0], "cali voltaje Solar data: %d mV", voltage);
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
@@ -2616,23 +2518,25 @@ void app_main(void)
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
         /*TO-DO añade márgenes de tolerancia*/
         if (ozonoBabor == ozonoEstribor){
-//            ESP_LOGI(TAG, "O3B == 03E");
-            estadoTimonExterno = 1;
-        } else if (ozonoBabor > ozonoEstribor) {
-//            ESP_LOGI(TAG, "O3B > 03E");
+            ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = 0;
+        } else if (ozonoBabor > ozonoEstribor) {
+            ESP_LOGI(TAG, "O3B > 03E");
+            estadoTimonExterno = -85;
         } else {
-//            ESP_LOGI(TAG, "O3B < 03E");
-            estadoTimonExterno = 2;
+            ESP_LOGI(TAG, "O3B < 03E");
+            estadoTimonExterno = 85;
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
         if (gpsspeed - gpsspeedAnt > 0) {
             /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO*/
         }
-//        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO");
-        blink_motorTimon(PIN_TIMON_EXTERNO_A, PIN_TIMON_EXTERNO_R, estadoTimonExterno);
-//        ESP_LOGI(TAG, "MUEVO TIMON INTERNO");
-        blink_motorTimon(PIN_TIMON_INTERNO_A, PIN_TIMON_INTERNO_R, estadoTimonInterno);
+        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO e INTERNO");
+        
+        ESP_ERROR_CHECK(mcpwm_set_duty_in_us(MCPWM_UNIT_1, MCPWM_TIMER_0, MCPWM_OPR_A, convert_servo_180_angle_to_duty_us(estadoTimonExterno)));
+        vTaskDelay(pdMS_TO_TICKS(200));
+        ESP_ERROR_CHECK(mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, convert_servo_90_angle_to_duty_us(estadoTimonInterno)));
+        vTaskDelay(pdMS_TO_TICKS(200)); //Add delay, since it takes time for servo to rotate, generally 100ms/60degree rotation under 5V power supply
         /* FASE 5: EMISIÓN DE DATOS Y SLEEP */
         /* TO-DO  AJUSTAR PARA INCLUIR GSM TAMBIÉN 
         TO-DO ALERTA A TELEGRAM SI OZONO TRAS FILTRO ES MUY PARECIDO O MAYOR QUE OZONO ANTES DE FILTROS
