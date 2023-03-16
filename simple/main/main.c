@@ -140,7 +140,7 @@ static const char *TAG = "ServidorSimple";
 #define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
 #define RESL 10100 // Va de 100 a 10100 ohmios
 // TO-DO ajustar al sensor de ozono
-#define VOLTREF 5000 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref
+#define VOLTREF 4000 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
 #define VOLTREFDATASHEET 5000
 
 #define CTRLZ 26 // Definir Ctrl+Z
@@ -530,6 +530,7 @@ static void parse(char * line) {
         case MINMEA_SENTENCE_RMC: {
             struct minmea_sentence_rmc frame;
             if (minmea_parse_rmc(&frame, line)) {
+                /* COMENTADO PARA VER LO DE SENSORES CON MAYOR CLARIDAD
                 printf("$RMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d\n",
                         frame.latitude.value, frame.latitude.scale,
                         frame.longitude.value, frame.longitude.scale,
@@ -542,14 +543,7 @@ static void parse(char * line) {
                         minmea_tocoord(&frame.latitude),
                         minmea_tocoord(&frame.longitude),
                         minmea_tofloat(&frame.speed));
-                
-                // TO-DO ver si nos interesa solo tomarlo de la primera trama GGA
-                // TO-DO borrar luego
-                //gpslatitudeAnt = gpslatitude;
-                //gpslongitudeAnt = gpslongitude;
-                //gpslatitude = minmea_tocoord(&frame.latitude);
-                //gpslongitude = minmea_tocoord(&frame.longitude);
-
+                */
                 gpscourseAnt = gpscourse;
                 gpscourse = minmea_tofloat(&frame.course);
                 gpsspeedAnt = gpsspeed;
@@ -560,14 +554,14 @@ static void parse(char * line) {
         case MINMEA_SENTENCE_GSV: {
             struct minmea_sentence_gsv frame;
             if (minmea_parse_gsv(&frame, line)) {
-                printf("$GSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
+                //printf("$GSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
                 printf("$GSV: satellites in view: %d\n", frame.total_sats);
-                for (int i = 0; i < frame.total_sats; i++)
-                    printf("$GSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
-                        frame.sats[i].nr,
-                        frame.sats[i].elevation,
-                        frame.sats[i].azimuth,
-                        frame.sats[i].snr);
+                //for (int i = 0; i < frame.total_sats; i++)
+                //    printf("$GSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
+                //        frame.sats[i].nr,
+                //        frame.sats[i].elevation,
+                //        frame.sats[i].azimuth,
+                //        frame.sats[i].snr);
             }
         } break;
 
@@ -624,12 +618,12 @@ static void rx_task(void *arg)
         ESP_ERROR_CHECK(uart_get_buffered_data_len(UART, (size_t*)&length));
         length = uart_read_bytes(UART, esp_gps->buffer, RX_BUF_SIZE, 100 / portTICK_PERIOD_MS);
 
-        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
+//        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
 
         /* make sure the line is a standard string TO-DO*/
         esp_gps->buffer[length] = '\0';
         /* Send new line to handle */
-        ESP_LOGI(RX_TASK_TAG, "Inicio decoding:");
+//        ESP_LOGI(RX_TASK_TAG, "Inicio decoding:");
         //if (gps_decode(esp_gps, length + 1) != ESP_OK) {
         //    ESP_LOGW(RX_TASK_TAG, "GPS decode line failed");
         //}
@@ -731,7 +725,7 @@ static void configure_motor_continuo(gpio_num_t pin)
 // Switch, se usará para encender o apagar el LCD
 static void configure_switch(void)
 {
-    ESP_LOGI(TAG, "Example configured to switch GPIO LED!");
+    ESP_LOGI(TAG, "Example configured to switch GPIO!");
     gpio_reset_pin(PIN_SWITCH);
     /* Set the GPIO 34 as a push/pull output */
     gpio_set_direction(PIN_SWITCH, GPIO_MODE_INPUT);
@@ -781,20 +775,20 @@ static esp_err_t i2c_master_init(SSD1306_t *dev, int16_t sda, int16_t scl, int16
  * returns int
  * 
 */
-static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura){
+static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura, double ajusteUnicoSensor){
     double resistencia = RESL * ( VOLTREF / ((double) lecturaInicial) - 1);
     ESP_LOGI(TAG, "La resistencia me sale %lf", resistencia);
     double resistenciaAjustada = resistencia / (1 - 0.013 * (temperatura - 20) -  (humedad - 55) / 30 * (0.175 + 0.2 - (20 - 20 * temperatura)));
     ESP_LOGI(TAG, "La resistencia ajustada me sale %lf", resistenciaAjustada);
     double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/RESL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/RESL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET. 1.7 es un valor corrector
-    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", correccionLectura/1000);
-    return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -correccionLectura/1000 + 4) -1))) ; // TO-DO Ajuste para no salirse de los 0-1000 ppm
+    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", (correccionLectura + ajusteUnicoSensor)/1000);
+    return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -(correccionLectura+ajusteUnicoSensor)/1000 + 4) -1))) ; // TO-DO Ajuste para no salirse de los 0-1000 ppm
 }
 
 void miESPes(esp_err_t retA){
     if (retA == ESP_OK)
     {
-        ESP_LOGI(TAG, "Logre llamar al modulo ADC12C y darle un comando");
+        ESP_LOGI(TAG, "Logre llamar al modulo ADCI2C Adafruit y darle un comando");
     }
     else if (retA == ESP_ERR_TIMEOUT)
     {
@@ -890,7 +884,7 @@ int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_
         miESPes(ret);
     }
     
-    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
+    //ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
     esp_log_buffer_hex(TAG, dato, len);
     int MSBsinSigno = dato[0] % 128; // El sistema usa valores por encima de 7F para valores negativos
@@ -901,10 +895,10 @@ int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_
     return result;
 }
 
-void miEspADCes(esp_err_t retA){
+void miESPTempHumes(esp_err_t retA){
     if (retA == ESP_OK)
     {
-        ESP_LOGI(TAG, "Logre llamar al modulo ADC12C y darle un comando");
+        ESP_LOGI(TAG, "Logre llamar al sensor i2c tempHum y darle un comando");
     }
     else if (retA == ESP_ERR_TIMEOUT)
     {
@@ -920,77 +914,13 @@ void miEspADCes(esp_err_t retA){
     }
     else if (retA == ESP_FAIL)
     {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+        ESP_LOGW(TAG, "Command error, slave TempHum hasn't ACK the transfer");
     }
     else
     {
         ESP_LOGW(TAG, "Read failed");
     }
-    // ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
-}
-
-/* TO-DO BORRAR LO DE ABAJO*/
-int ADC12C_register_read(uint8_t slave_addr, uint8_t reg_addr, size_t len)
-{
-
-    uint8_t dato[3] = {0, 0, 0}; // En modo de 12 bits nos devuelve 3 bytes, 2 de lectura y uno de configuración
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // Primero hacemos que el sensor nos lea el comando
-    ESP_ERROR_CHECK(i2c_master_start(cmd));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_VAL));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_stop(cmd));
-
-    esp_err_t retA = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
-
-    i2c_cmd_link_delete(cmd);
-    miEspADCes(retA);
-
-    i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
-    ESP_ERROR_CHECK(i2c_master_start(cmd3));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, (slave_addr << 1) | READ_BIT, ACK_VAL));
-    int i = 0;
-    for (i = 0; i < len - 1; i++)
-    {
-        ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[i], ACK_VAL));
-    }
-    ESP_ERROR_CHECK(i2c_master_read_byte(cmd3, &dato[len - 1], NACK_VAL));
-    ESP_ERROR_CHECK(i2c_master_stop(cmd3));
-
-    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd3, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-
-    i2c_cmd_link_delete(cmd3);
-    if (ret == ESP_OK)
-    {
-//        ESP_LOGI(TAG, "Recibi dato tempHum");
-        for (int i = 0; i < len; i++)
-        {
-//            printf("0x%02x ", dato[i]);
-            if ((i + 1) % 16 == 0)
-            {
-                printf("\r\n");
-            }
-        }
-        if (len % 16)
-        {
-            printf("\r\n");
-        }
-    }
-    else
-    {
-        miEspADCes(ret);
-    }
-    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
-
-    esp_log_buffer_hex(TAG, dato, len);
-    uint8_t restoMSB = dato[0]%16; // En modo 12-bit los 4 primeros bits del MSB son repeticiones del MSB, solo nos interesan entonces los otros 4 bits
-    int result = (int) 0.001 * (restoMSB * 256 + dato[1])/(2-1) * VOLTREFDATASHEET / 2048.0; // Según datasheet, multiplicar el resultado por el LSB y dividir por el factor de ganancia, que en este caso es 1, además hay que tener en cuenta que 2048 ahora son 5V
-
-    ESP_LOGI(TAG, "Lectura de ADC I2C me sale %d ", result);
-    //return ESP_OK;
-    return result;
+//    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
 }
 
 static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, uint8_t reg_addrLSB, size_t len)
@@ -1010,30 +940,7 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     vTaskDelay(pdMS_TO_TICKS(20)); // Needs 1 ms to prepare
 
     i2c_cmd_link_delete(cmd);
-    if (retA == ESP_OK)
-    {
-//        ESP_LOGI(TAG, "Logre llamar al sensor i2c tempHum y darle un comando");
-    }
-    else if (retA == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (retA == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (retA == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (retA == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
-    else
-    {
-        ESP_LOGW(TAG, "Read failed");
-    }
+    miESPTempHumes(retA);
 //    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
 
     i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
@@ -1066,25 +973,9 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
             printf("\r\n");
         }
     }
-    else if (ret == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
     else
     {
-        ESP_LOGW(TAG, "Read failed");
+        miESPTempHumes(ret);
     }
 //    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
@@ -1093,198 +984,6 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
 
 //    ESP_LOGI(TAG, "Lectura de humedad me sale %d y temperatura %d", humedadAtmos, temperaturaAtmos);
-    return ESP_OK;
-}
-
-static esp_err_t register_read_commando(uint8_t slave_addr, uint8_t reg_addr, size_t len) // , uint8_t *data
-{
-    /*
-     * El sensor de luminosidad tiene una forma curiosa de funcionar, en vez de enviar su dirección y luego el comando para leer, debes enviar su dirección con intención
-     * de escribir y luego envias la dirección el registro que quieres leer, tras ello envías de nuevo la dirección pero con la intención de leer, y ahora ya recibes los
-     * (2) byte(s) de respuesta
-     */
-    uint8_t dato[2] = {5, 7};
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // Primero hacemos que el sensor nos lea el comando
-    ESP_ERROR_CHECK(i2c_master_start(cmd));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, reg_addr, ACK_CHECK_EN));
-    // Ahora le pedimos que nos de el valor asociado al comando
-    ESP_ERROR_CHECK(i2c_master_start(cmd));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | READ_BIT, ACK_CHECK_EN));
-
-    int i = 0;
-    for (i = 0; i < len - 1; i++)
-    {
-        ESP_ERROR_CHECK(i2c_master_read_byte(cmd, &dato[i], ACK_VAL));
-        ESP_LOGI(TAG, "Leo valor bien: %x", dato[i]);
-    }
-    ESP_ERROR_CHECK(i2c_master_read_byte(cmd, &dato[len - 1], NACK_VAL));
-    ESP_ERROR_CHECK(i2c_master_stop(cmd));
-
-    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    i2c_cmd_link_delete(cmd);
-    ESP_LOGI(TAG, "Leo valor bien (tras lectura sale): %x", dato[0]);
-    if (ret == ESP_OK)
-    {
-        for (int i = 0; i < len; i++)
-        {
-            printf("0x%02x ", dato[i]);
-            if ((i + 1) % 16 == 0)
-            {
-                printf("\r\n");
-            }
-        }
-        if (len % 16)
-        {
-            printf("\r\n");
-        }
-    }
-    else if (ret == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
-    else
-    {
-        ESP_LOGW(TAG, "Read failed");
-    }
-    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
-
-    esp_log_buffer_hex(TAG, dato, 2);
-//    datoI2CFotonlegible = dato[1] * 256 + dato[0];
-//    ESP_LOGI(TAG, "El Lumen me sale %X", datoI2CFotonlegible);
-    return ESP_OK;
-}
-
-static esp_err_t iniciar_sensorLuz(uint8_t slave_addr, uint8_t reg_addr, size_t len) // , uint8_t *data
-{
-    /*
-     * El sensor de luminosidad tiene una forma curiosa de funcionar, en vez de enviar su dirección y luego el comando para leer, debes enviar su dirección con intención
-     * de escribir y luego envias la dirección el registro que quieres leer, tras ello envías de nuevo la dirección pero con la intención de leer, y ahora ya recibes los
-     * (2) byte(s) de respuesta
-     */
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    // Inicialización
-    ESP_ERROR_CHECK(i2c_master_start(cmd));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, (slave_addr << 1) | WRITE_BIT, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x00, ACK_CHECK_EN)); // Select the 0x00 register
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x42, ACK_CHECK_EN)); // Write on the 0x00 register lowThreshold 10000, highThreshols 20000 e InterruptEnable 1 0x0843. El LSB
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, 0x08, ACK_CHECK_EN)); // El MSB
-    ESP_ERROR_CHECK(i2c_master_stop(cmd));
-
-    esp_err_t ret = i2c_master_cmd_begin(i2c_master_port, cmd, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    i2c_cmd_link_delete(cmd);
-    if (ret == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Inicialización Sensor Lumen A exitoso");
-    }
-    else if (ret == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
-    else
-    {
-        ESP_LOGW(TAG, "Read failed");
-    }
-
-    i2c_cmd_handle_t cmd2 = i2c_cmd_link_create();
-    // Inicialización
-    ESP_ERROR_CHECK(i2c_master_start(cmd2));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd2, (slave_addr << 1) | WRITE_BIT, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd2, 0x01, ACK_CHECK_EN)); // Select the 0x01 register (high threshold)
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd2, 0x20, ACK_CHECK_EN)); // Write on the 0x00 register lowThreshold 10000 (0x2710), highThreshols 2000 (4E20) e InteeruptEnable 1 0x0843. El LSB
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd2, 0x4E, ACK_CHECK_EN)); // El MSB
-    ESP_ERROR_CHECK(i2c_master_stop(cmd2));
-
-    esp_err_t ret2 = i2c_master_cmd_begin(i2c_master_port, cmd2, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    i2c_cmd_link_delete(cmd2);
-    if (ret2 == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Inicialización Sensor Lumen B exitoso");
-    }
-    else if (ret2 == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret2 == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret2 == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret2 == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
-    else
-    {
-        ESP_LOGW(TAG, "Read failed");
-    }
-
-    i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
-    // Inicialización
-    ESP_ERROR_CHECK(i2c_master_start(cmd3));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, (slave_addr << 1) | WRITE_BIT, ACK_CHECK_EN));
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, 0x02, ACK_CHECK_EN)); // Select the 0x01 register (low threshold)
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, 0x10, ACK_CHECK_EN)); // Write on the 0x00 register lowThreshold 10000 (0x2710), highThreshols 2000 (4E20) e InteeruptEnable 1 0x0843. El LSB
-    ESP_ERROR_CHECK(i2c_master_write_byte(cmd3, 0x27, ACK_CHECK_EN)); // El MSB
-    ESP_ERROR_CHECK(i2c_master_stop(cmd3));
-
-    esp_err_t ret3 = i2c_master_cmd_begin(i2c_master_port, cmd3, pdMS_TO_TICKS(I2C_MASTER_TIMEOUT_MS));
-    i2c_cmd_link_delete(cmd3);
-    if (ret3 == ESP_OK)
-    {
-        ESP_LOGI(TAG, "Inicialización Sensor Lumen C exitoso");
-    }
-    else if (ret3 == ESP_ERR_TIMEOUT)
-    {
-        ESP_LOGW(TAG, "Bus is busy");
-    }
-    else if (ret3 == ESP_ERR_INVALID_ARG)
-    {
-        ESP_LOGW(TAG, "Parameter error");
-    }
-    else if (ret3 == ESP_ERR_INVALID_STATE)
-    {
-        ESP_LOGW(TAG, "I2C driver not installed on not in master mode");
-    }
-    else if (ret3 == ESP_FAIL)
-    {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
-    }
-    else
-    {
-        ESP_LOGW(TAG, "Read failed");
-    }
-
     return ESP_OK;
 }
 
@@ -1302,7 +1001,7 @@ esp_mqtt_client_handle_t client;
 
 static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 {
-
+    // TO-DO ver si puedo hacer que en caso de error reinicie el MQTT con el client
     switch (event->event_id)
     {
     case MQTT_EVENT_CONNECTED:
@@ -1362,6 +1061,7 @@ static void mqtt_app_start(void)
 
     char *post_data = cJSON_PrintUnformatted(root);
     // Enviar los datos
+    // TO-DO ver un try-except o simialr, si da error entonces paso los datos por GSM
     esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
     cJSON_Delete(root);
     // Free is intentional, it's client responsibility to free the result of cJSON_Print
@@ -1743,18 +1443,6 @@ static esp_err_t root_get_handler(httpd_req_t *req)
     }
     else
     {
-        char estadoSwitch[] = "N/A";
-        if (s_switch_state == true)
-        {
-            ESP_LOGI(TAG, "Le digo que tengo switch a ON");
-            sprintf(estadoSwitch, " ON");
-        }
-        else
-        {
-            ESP_LOGI(TAG, "Le digo que tengo switch a OFF");
-            sprintf(estadoSwitch, "OFF");
-        }
-
         sprintf(mensajito, "<h1> Acceso Web http a AspiradO3 </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p> <h1> V sol (mV): %d</h1> <h1> Ozono Estribor (ppm): %d</h1><h1> Ozono Babor (ppm): %d</h1><h1> Ozono tras filtros (ppm): %d</h1>", voltajeSolar, ozonoEstribor, ozonoBabor, ozonoTrasFiltro);
 
         mess = strcat(mensajito, finDePagina);
@@ -2149,8 +1837,6 @@ void app_main(void)
     // Iniciar el display
     SSD1306_t dev;
     ESP_ERROR_CHECK(i2c_master_init(&dev, I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, 0));
-    
-    ESP_ERROR_CHECK(iniciar_sensorLuz(LUZ_SENSOR_ADDR, LUZ_REG_ADDR, 2));
     ESP_LOGI(TAG, "I2C initialized successfully");
     // Variables auxiliares del I2C display, e inicialización extra del display
     char primeralineChar[32];
@@ -2213,17 +1899,6 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    /*
-     * Cosas del Sleep TO-DO AJUSTAR/BORRAR
-     */
-    // deQueMeLevante(sleep_time_ms);
-    //  Sleep segun el boton del display
-    //sleepDelDisplay();
-
-    // Sleep de 60 segundos
-    //const int wakeup_time_sec = 60;
-    //printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
 
     /*
      * Registrar handlers de evento para montar el servidor cuando se conectan el Wi-Di o Ethernet, y parar cuando se desconecta.
@@ -2366,13 +2041,9 @@ void app_main(void)
         /* FASE 2: LECTURA DE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
         ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
-        /* FASE 2.2 LECTURA OZONO I2C TO-DO COMPROBAR QUE ESTO FUNCIONA Y ENTONCES COMENTA EL ADC INTERNO excepto para solar*/
-    //    ozonoBabor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal1, 3);
-    //    ozonoEstribor = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal2, 3);
-    //    ozonoTrasFiltro = ADC12C_register_read(ADC12C_AADR, regADCI2C_paraCanal3, 3);
+        /* FASE 2.2 LECTURA OZONO I2C */
         ESP_LOGI(TAG, "Procedo a leer I2C de ADCs ozono");
         ESP_LOGI(TAG, "Procedo a leer ADC 0");
-        
         //int ozonoAux = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA3, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ozonoBabor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ESP_LOGI(TAG, "Procedo a leer ADC 1");
@@ -2385,11 +2056,17 @@ void app_main(void)
         //ESP_ERROR_CHECK(register_read_commando(LUZ_SENSOR_ADDR, LUZ_REG_ADDR, 2));
 
         vTaskDelay(pdMS_TO_TICKS(1000)); // El I2C puede tardar hasta 11 segundos
+        double correccionSensorBabor = 0.0;
+        double correccionSensorEstribor = 0.0;
+        double correccionSensorTrasFiltro = 0.0;
+        int corrInicialSensorMayor = 0; // 2000
+        int corrInicialSensorMedio = 0;
+        int corrInicialSensorMenor = 0;
 
         /* FASE 3: JUSTE DE LECTURAS DE OZONO */
-        ozonoBabor = ajustarValoresOzono(ozonoBabor, humedadAtmos, temperaturaAtmos);
-        ozonoEstribor = ajustarValoresOzono(ozonoEstribor, humedadAtmos, temperaturaAtmos);
-        ozonoTrasFiltro = ajustarValoresOzono(ozonoTrasFiltro, humedadAtmos, temperaturaAtmos);
+        ozonoBabor = ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor);
+        ozonoEstribor = ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor);
+        ozonoTrasFiltro = ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro);
         ESP_LOGI(TAG, "correcion O3 babor: %d", ozonoBabor );
         ESP_LOGI(TAG, "correcion O3 estribor: %d", ozonoEstribor );
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
