@@ -649,18 +649,95 @@ static void tx_task(void *arg)
 
     /* La tarjeta a lo mejor requiere de un PIN */
     char mensajito[494];
+    char mensajito2[494];
+    char mensajito3[494];
+    char mensajito4[494];
 
     char finDeMensaje[] = "";
     const char *mess;
+    const char *mess2;
+    const char *mess3;
+    const char *mess4;
 
     sprintf(mensajito, "AT+CPIN=%s", SDSMSPIN);
     mess = strcat(mensajito, finDeMensaje); // TO-DO define PIN
     sendData(TX_TASK_TAG, mess);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
+    //https://www.youtube.com/watch?v=aYQKJFromXs
+
+    sprintf(mensajito2, "AT+CREG=1"); // TO-DO
+    mess2 = strcat(mensajito2, finDeMensaje);
+    sendData(TX_TASK_TAG, mess2);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sprintf(mensajito3, "AT+CGATT=%s", SDSMSPIN);
+    mess3 = strcat(mensajito3, finDeMensaje);
+    sendData(TX_TASK_TAG, mess3);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIPSHUT");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIPSTATUS");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIPMUX=0");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CSTT=\"mms.orange.es\""); // TO-DO
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIICR"); // Conexion inalámbrica
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIFSR"); // IP local
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIPSPRT=0"); // TO-DO
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    
+    sprintf(mensajito4, "AT+CIPSTART\"TCP\",\"%s/sensor/%s/data\",\"1883\"", MQTTURI, TOKENMQTT);
+    mess4 = strcat(mensajito4, finDeMensaje);
+    sendData(TX_TASK_TAG, mess3);
+
+    sendData(TX_TASK_TAG, mess4); // TO-DO a lol mejor es v1/devices/me/telemetry también
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CIPSEND"); // Mandar datos al servidor remoto
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+
     while (1) {
-        sendData(TX_TASK_TAG, "Hello world"); // TO-DO reemplazar por el string de datos que me interesa (el de mqtt_start)
+        sendData(TX_TASK_TAG, "Hello world"); // TO-DO reemplazar por el string de datos que me interesa (el de mqtt_app_start)
+        // TO-DO meter de una forma que no duplique código
+        cJSON *root = cJSON_CreateObject();
+
+        cJSON_AddNumberToObject(root, "ozonoBabor", ozonoBabor);                       // En p.p.m.
+        cJSON_AddNumberToObject(root, "ozonoEstribor", ozonoEstribor);
+        cJSON_AddNumberToObject(root, "ozonoTrasFiltro", ozonoTrasFiltro);
+        cJSON_AddNumberToObject(root, "posicionDelTimonExterno", estadoTimonExterno);  // Con los valores asignados
+        cJSON_AddNumberToObject(root, "posicionDelTimonInterno", estadoTimonInterno);
+        cJSON_AddNumberToObject(root, "tempAtmos", temperaturaAtmos);                  // En grados Celsius
+        cJSON_AddNumberToObject(root, "humedadRel", humedadAtmos);                     // En %
+        cJSON_AddNumberToObject(root, "energiaSolar", voltajeSolar);                   // En voltios
+        cJSON_AddNumberToObject(root, "latitudGNSS", gpslatitude);                     // Grados
+        cJSON_AddNumberToObject(root, "longitudGNSS", gpslongitude);
+        cJSON_AddNumberToObject(root, "altitudGNSS", gpsaltitude);
+        cJSON_AddNumberToObject(root, "velocidadGNSS", gpsspeed);                      // Nudos
+        cJSON_AddNumberToObject(root, "orientacionGNSS", gpscourse);                   // Grados
+
+        char *post_data = cJSON_PrintUnformatted(root);
+        // Enviar los datos
+        // TO-DO ver un try-except o simialr, si da error entonces paso los datos por GSM
+      //  esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
+        cJSON_Delete(root);
+        // Free is intentional, it's client responsibility to free the result of cJSON_Print
+        
+    
+        sendData(TX_TASK_TAG, post_data); // TO-DO reemplazar por el string de datos que me interesa (el de mqtt_start)
         vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        free(post_data);
     }
 }
 /*
