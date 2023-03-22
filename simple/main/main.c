@@ -2128,22 +2128,23 @@ void app_main(void)
         ESP_LOGI(TAG, "Procedo a leer ADC 2");
         ozonoTrasFiltro = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA2, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
 
-        // TO-DO BORRAR?
-        //ESP_LOGI(TAG, "Procedo a leer I2C de Luminosidad");
-        //ESP_ERROR_CHECK(register_read_commando(LUZ_SENSOR_ADDR, LUZ_REG_ADDR, 2));
-
         vTaskDelay(pdMS_TO_TICKS(1000)); // El I2C puede tardar hasta 11 segundos
+
+        // TO-DO Ajustar correciones
         double correccionSensorBabor = 0.0;
         double correccionSensorEstribor = 0.0;
         double correccionSensorTrasFiltro = 0.0;
         int corrInicialSensorMayor = 0; // 2000
         int corrInicialSensorMedio = 0;
         int corrInicialSensorMenor = 0;
+        double multCorrEstribor = 1.02;
+        double multCorrBabor = 1.055;
+        double multCorrTrasFiltro = 1.0;
 
         /* FASE 3: JUSTE DE LECTURAS DE OZONO */
-        ozonoBabor = ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor);
-        ozonoEstribor = ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor);
-        ozonoTrasFiltro = ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro);
+        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor);
+        ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor);
+        ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro);
         ESP_LOGI(TAG, "correcion O3 babor: %d", ozonoBabor );
         ESP_LOGI(TAG, "correcion O3 estribor: %d", ozonoEstribor );
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
