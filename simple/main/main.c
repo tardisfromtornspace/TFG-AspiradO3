@@ -2131,7 +2131,7 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(1000)); // El I2C puede tardar hasta 11 segundos
 
         // TO-DO Ajustar correciones
-        double correccionSensorBabor = 0.0;
+        double correccionSensorBabor = 0.0 ; // Un test, estos 2000 no valen apra nada
         double correccionSensorEstribor = 0.0;
         double correccionSensorTrasFiltro = 0.0;
         int corrInicialSensorMayor = 0; // 2000
