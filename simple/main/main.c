@@ -2141,7 +2141,7 @@ void app_main(void)
         double multCorrBabor = 1.055;
         double multCorrTrasFiltro = 1.0;
 
-        /* FASE 3: JUSTE DE LECTURAS DE OZONO */
+        /* FASE 3: AJUSTE DE LECTURAS DE OZONO */
         ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor);
         ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor);
         ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro);
@@ -2150,20 +2150,23 @@ void app_main(void)
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
 
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
-        /*TO-DO añade márgenes de tolerancia*/
+        /*TO-DO añade márgenes de tolerancia y sistema de control*/
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
-            estadoTimonExterno = 0;
-        } else if (ozonoBabor > ozonoEstribor) {
+            estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
+        } else if (ozonoBabor > ozonoEstribor) { // A mayor velocidad y diferencia, más brusco el giro
             ESP_LOGI(TAG, "O3B > 03E");
-            estadoTimonExterno = -85;
+            estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //-85;
         } else {
             ESP_LOGI(TAG, "O3B < 03E");
-            estadoTimonExterno = 85;
+            estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //= 85;
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
-        if (gpsspeed - gpsspeedAnt > 0) {
-            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO*/
+        if (gpsspeed - gpsspeedAnt > 50 || gpsspeed > 50) {
+            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD*/
+            estadoTimonInterno = -45;
+        } else {
+            estadoTimonInterno = 45;
         }
         ESP_LOGI(TAG, "MUEVO TIMON EXTERNO e INTERNO");
         
