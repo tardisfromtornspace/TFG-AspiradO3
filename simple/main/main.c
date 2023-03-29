@@ -2150,7 +2150,8 @@ void app_main(void)
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
 
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
-        /*TO-DO añade márgenes de tolerancia y sistema de control*/
+        /*TO-DO añade márgenes de tolerancia y sistema de control
+        NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
@@ -2163,7 +2164,7 @@ void app_main(void)
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
         if (gpsspeed - gpsspeedAnt > 50 || gpsspeed > 50) {
-            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD*/
+            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD, TOMO LO DE GPS*/
             estadoTimonInterno = -45;
         } else {
             estadoTimonInterno = 45;
