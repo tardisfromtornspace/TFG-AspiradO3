@@ -140,8 +140,8 @@ static const char *TAG = "ServidorSimple";
 #define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
 #define RESL 10100 // Va de 100 a 10100 ohmios
 // TO-DO ajustar al sensor de ozono
-#define VOLTREF 4000 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
-#define VOLTREFDATASHEET 5000
+#define VOLTREF 4.500 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
+#define VOLTREFDATASHEET 5.000
 
 #define CTRLZ 26 // Definir Ctrl+Z
 
@@ -685,7 +685,7 @@ static void tx_task(void *arg)
     sendData(TX_TASK_TAG, "AT+CIPMUX=0");
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
-    sendData(TX_TASK_TAG, "AT+CSTT=\"mms.orange.es\""); // TO-DO
+    sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\""); // TO-DO La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     sendData(TX_TASK_TAG, "AT+CIICR"); // Conexion inalámbrica
@@ -853,13 +853,15 @@ static esp_err_t i2c_master_init(SSD1306_t *dev, int16_t sda, int16_t scl, int16
  * 
 */
 static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura, double ajusteUnicoSensor){
-    double resistencia = RESL * ( VOLTREF / ((double) lecturaInicial) - 1);
+    double resistencia = RESL * ( VOLTREF / ((((double) lecturaInicial) / 1024.0) * VOLTREF) - 1);
     ESP_LOGI(TAG, "La resistencia me sale %lf", resistencia);
-    double resistenciaAjustada = resistencia / (1 - 0.013 * (temperatura - 20) -  (humedad - 55) / 30 * (0.175 + 0.2 - (20 - 20 * temperatura)));
+    double resistenciaAjustada = resistencia / (1 - 0.013 * (temperatura - 20) -  (humedad - 55) / 30 * (0.175 + 0.2/60 * (20 - temperatura)));
     ESP_LOGI(TAG, "La resistencia ajustada me sale %lf", resistenciaAjustada);
-    double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/RESL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/RESL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET. 1.7 es un valor corrector
-    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", (correccionLectura + ajusteUnicoSensor)/1000);
-    return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -(correccionLectura+ajusteUnicoSensor)/1000 + 4) -1))) ; // TO-DO Ajuste para no salirse de los 0-1000 ppm
+    double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/RESL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/RESL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET.
+    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", (correccionLectura + ajusteUnicoSensor));
+    //return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -(correccionLectura+ajusteUnicoSensor)/1000 + 4) -1))) ; // TO-DO Ajuste para no salirse de los 0-1000 ppm, teníamos 100*, pero lo pasamos a 10*
+    //return (10.66435681 * pow(resistenciaAjustada, 2.25889394) - 10.66435681); //  TO-DO  / 1000???
+    return  100 * (pow(E, -(correccionLectura+ajusteUnicoSensor) + 4) -1);
 }
 
 void miESPes(esp_err_t retA){
@@ -2177,7 +2179,6 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(200)); //Add delay, since it takes time for servo to rotate, generally 100ms/60degree rotation under 5V power supply
         /* FASE 5: EMISIÓN DE DATOS Y SLEEP */
         /* TO-DO  AJUSTAR PARA INCLUIR GSM TAMBIÉN 
-        TO-DO ALERTA A TELEGRAM SI OZONO TRAS FILTRO ES MUY PARECIDO O MAYOR QUE OZONO ANTES DE FILTROS
         */
         // TO-DO probablemente borrar ya que requiere control de navegación
         if (sleepEnabled && contadorAdormir > 15)
