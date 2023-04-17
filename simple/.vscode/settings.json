@@ -28,6 +28,19 @@
     "rtc.h": "c",
     "ulp.h": "c",
     "cmath": "c",
-    "complex": "c"
+    "complex": "c",
+    "*.tcc": "c",
+    "optional": "c",
+    "istream": "c",
+    "ostream": "c",
+    "ratio": "c",
+    "system_error": "c",
+    "functional": "c",
+    "tuple": "c",
+    "type_traits": "c",
+    "utility": "c",
+    "bitset": "c",
+    "chrono": "c",
+    "algorithm": "c"
   }
 }

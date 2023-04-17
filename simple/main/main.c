@@ -139,6 +139,13 @@ static const char *TAG = "ServidorSimple";
 #define E 2.718281828459
 #define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
 #define RESL 10100 // Va de 100 a 10100 ohmios
+
+#define RESLBABOR 10630 // Lecturas reales del multimetro
+#define RESLESTRIBOR 9550
+#define RESLTRASFILTRO 9640
+
+#define MQ131_DEFAULT_STABLE_CYCLE 15 //Número de ciclos estables
+
 // TO-DO ajustar al sensor de ozono
 #define VOLTREF 4.500 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
 #define VOLTREFDATASHEET 5.000
@@ -844,7 +851,7 @@ static esp_err_t i2c_master_init(SSD1306_t *dev, int16_t sda, int16_t scl, int16
 /*
  * ajustarValoresOzono
  * @brief Esta función toma la lectura de ozono y la corrige utilizando la fórmula del divisor de tensión
- * 1º Obtiene la resistencia dada por el valor de lectura obtenido
+ * 1º Obtiene la resistencia dada por el valor de lectura obtenido, separado en getResistencia() por comodidad y claridad
  * 2º Tomando humedad y temperatura, ajusta la resistencia
  * 3º Recalcula de nuevo empleando el divisor de tensión
  * 4º Ajusta valores a la curva del datasheet de voltajes
@@ -852,16 +859,31 @@ static esp_err_t i2c_master_init(SSD1306_t *dev, int16_t sda, int16_t scl, int16
  * returns int
  * 
 */
-static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura, double ajusteUnicoSensor){
-    double resistencia = RESL * ( VOLTREF / ((((double) lecturaInicial) / 1024.0) * VOLTREF) - 1);
+double getResistencia(int lecturaInicial, double resistenciaL){
+    double resistencia = resistenciaL * ( VOLTREF / ((((double) lecturaInicial) / 1024.0)) - 1);
+    ESP_LOGI(TAG, "Para VOLTREF / (lectInicial / 1024) me sale %lf", VOLTREF / ((((double) lecturaInicial) / 1024.0)));
     ESP_LOGI(TAG, "La resistencia me sale %lf", resistencia);
+    return resistencia;
+}
+
+static int ajustarValoresOzono(int lecturaInicial, int humedad, int temperatura, double ajusteUnicoSensor, double resistenciaL, double valueR0){
+    double resistencia = getResistencia(lecturaInicial, resistenciaL);
+
     double resistenciaAjustada = resistencia / (1 - 0.013 * (temperatura - 20) -  (humedad - 55) / 30 * (0.175 + 0.2/60 * (20 - temperatura)));
     ESP_LOGI(TAG, "La resistencia ajustada me sale %lf", resistenciaAjustada);
-    double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/RESL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/RESL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET.
-    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", (correccionLectura + ajusteUnicoSensor));
-    //return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -(correccionLectura+ajusteUnicoSensor)/1000 + 4) -1))) ; // TO-DO Ajuste para no salirse de los 0-1000 ppm, teníamos 100*, pero lo pasamos a 10*
-    //return (10.66435681 * pow(resistenciaAjustada, 2.25889394) - 10.66435681); //  TO-DO  / 1000???
-    return  100 * (pow(E, -(correccionLectura+ajusteUnicoSensor) + 4) -1);
+
+    // Método 1, cálculo del valor de referencia en un circuito como el indicado en el datasheet
+    double correccionLectura = RESLDATASHEET / (RESLDATASHEET + RESLDATASHEET/resistenciaL * resistenciaAjustada) * VOLTREFDATASHEET; // RESLDATASHEET/resistenciaL es un valor corrector, hay 99 resistencias RESL en RESLDATASHEET.
+    ESP_LOGI(TAG, "La corrección de lectura me sale %lf", (correccionLectura/1000 + ajusteUnicoSensor));
+    //return (int) fmax( 0.0, fmin(1000.0, 100 * (pow(E, -(correccionLectura/1000 +ajusteUnicoSensor) + 4) -1))) ;
+
+    // Método 2, comparación del Ractual/R0 para determinar concentraciones y luego seguimos una aproximación del ratio según datasheet
+    double ratio = resistenciaAjustada / valueR0;
+    ESP_LOGI(TAG, "Ratio = %lf", ratio);
+    // Use this if you are monitoring low concentration of O3 (air quality project)
+    return (int) fmax( 0.0, fmin(1000.0, 9.4783 * pow(ratio, 2.3348)));
+    // Para altas concentraciones
+    //return (int) fmax( 0.0, fmin(1000.0, 10.66435681 * pow(ratio, 2.25889394) - 10.66435681));
 }
 
 void miESPes(esp_err_t retA){
@@ -967,7 +989,7 @@ int ADCADAFRUIT12C_register_read(uint8_t slave_addr, uint8_t reg_to_addr, uint8_
 
     esp_log_buffer_hex(TAG, dato, len);
     int MSBsinSigno = dato[0] % 128; // El sistema usa valores por encima de 7F para valores negativos
-    int result = (int) ((MSBsinSigno * 256 + dato[1]) / 32752.0 * 4096); // Según datasheet, el MSB va primero. Para un rango de
+    int result = (int) ((MSBsinSigno * 256 + dato[1]) / 32752.0 * 4096); // Según datasheet, el MSB va primero.
 
     ESP_LOGI(TAG, "Lectura de ADC I2C adafruit me sale %d ", result);
 
@@ -2037,6 +2059,74 @@ void app_main(void)
     xTaskCreate(tx_task, "uart_tx_task", 8192, NULL, configMAX_PRIORITIES-3, NULL);
 /* FIN DEL GITHUB DE OTRO COMPAÑERO*/
 
+
+// CALIBRACION SENSORES OZONO
+
+    int count = 0;
+    int countReadInRowBabor = 0;
+    int countReadInRowEstribor = 0;
+    int countReadInRowTrasFiltro = 0;
+    int timeToReadConsistency = MQ131_DEFAULT_STABLE_CYCLE;
+    int ozonoBaborAnt = -1;
+    int ozonoEstriborAnt = -1;
+    int ozonoTrasFiltroAnt = -1;
+    int ozonoBaborAntAnt = -1;
+    int ozonoEstriborAntAnt = -1;
+    int ozonoTrasFiltroAntAnt = -1;
+    int ozonoBaborC = -1;
+    int ozonoEstriborC = -1;
+    int ozonoTrasFiltroC  = -1;
+
+    while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
+        ESP_LOGI(TAG, "Procedo a leer ADC 0 (CALIBRACION)");
+        ozonoBaborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        ESP_LOGI(TAG, "Procedo a leer ADC 1 (CALIBRACION)");
+        ozonoEstriborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        ESP_LOGI(TAG, "Procedo a leer ADC 2 (CALIBRACION)");
+        ozonoTrasFiltroC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA2, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    
+        if(countReadInRowBabor <= timeToReadConsistency && (uint32_t)ozonoBaborAnt != (uint32_t)ozonoBaborC && (uint32_t)ozonoBaborAntAnt != (uint32_t)ozonoBaborC) {
+            ozonoBaborAntAnt = ozonoBaborAnt;
+            ozonoBaborAnt = ozonoBaborC;
+            countReadInRowBabor = 0;
+            ESP_LOGI(TAG, "Reseteo inRow Babor (CALIBRACION)");
+        } else {
+            countReadInRowBabor++;
+            ESP_LOGI(TAG, "inRow Babor = %d", countReadInRowBabor);
+        }
+        if(countReadInRowEstribor <= timeToReadConsistency && (uint32_t)ozonoEstriborAnt != (uint32_t)ozonoEstriborC && (uint32_t)ozonoEstriborAntAnt != (uint32_t)ozonoEstriborC) {
+            ozonoEstriborAntAnt = ozonoEstriborAnt;
+            ozonoEstriborAnt = ozonoEstriborC;
+            countReadInRowEstribor = 0;
+            ESP_LOGI(TAG, "Reseteo inRow Estribor (CALIBRACION)");
+        } else {
+            countReadInRowEstribor++;
+            ESP_LOGI(TAG, "inRow Estribor = %d", countReadInRowEstribor);
+        }
+        if(countReadInRowTrasFiltro <= timeToReadConsistency && (uint32_t)ozonoTrasFiltroAnt != (uint32_t)ozonoTrasFiltroC && (uint32_t)ozonoTrasFiltroAntAnt != (uint32_t)ozonoTrasFiltroC) {
+            ozonoTrasFiltroAntAnt = ozonoTrasFiltroAnt;
+            ozonoTrasFiltroAnt = ozonoTrasFiltroC;
+            countReadInRowTrasFiltro = 0;
+            ESP_LOGI(TAG, "Reseteo inRow TrasFiltro (CALIBRACION)");
+        } else {
+            countReadInRowTrasFiltro++;
+            ESP_LOGI(TAG, "inRow TrasFiltro = %d", countReadInRowTrasFiltro);
+        }
+
+    count++;
+    }
+    ESP_LOGI(TAG, "Calibracion COMPLETADA tras %d segundos", count);
+    double R0babor = getResistencia(ozonoBaborC, RESLBABOR);
+    double R0estribor = getResistencia(ozonoBaborC, RESLESTRIBOR);
+    double R0trasFiltro = getResistencia(ozonoBaborC, RESLTRASFILTRO);
+
+
     /*
      * Bucle infinito TO-DO mejorar con Tasks?
      */
@@ -2116,7 +2206,7 @@ void app_main(void)
         }
 
         vTaskDelay(pdMS_TO_TICKS(2000)); // Delays para asegurar lecturas ADC correctas
-
+    
         /* FASE 2: LECTURA DE HUMEDAD Y TEMPERATURA ATMOSFERICAS */
         ESP_LOGI(TAG, "Procedo a leer I2C de TempHum");
         ESP_ERROR_CHECK(tempHum_register_read(TEMPHUM_SENSOR_ADDR, COMANDO_TEMPHUM_MSB, COMANDO_TEMPHUM_LSB, 6));
@@ -2139,14 +2229,15 @@ void app_main(void)
         int corrInicialSensorMayor = 0; // 2000
         int corrInicialSensorMedio = 0;
         int corrInicialSensorMenor = 0;
-        double multCorrEstribor = 1.02;
-        double multCorrBabor = 1.055;
+        double multCorrEstribor = 1.0;
+        double multCorrBabor = 1.0;
         double multCorrTrasFiltro = 1.0;
 
         /* FASE 3: AJUSTE DE LECTURAS DE OZONO */
-        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor);
-        ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor);
-        ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro);
+
+        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor, RESLBABOR, R0babor); // TO-DO ajuste
+        ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor, RESLESTRIBOR, R0estribor);
+        ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro, RESLTRASFILTRO, R0trasFiltro);
         ESP_LOGI(TAG, "correcion O3 babor: %d", ozonoBabor );
         ESP_LOGI(TAG, "correcion O3 estribor: %d", ozonoEstribor );
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
@@ -2156,13 +2247,13 @@ void app_main(void)
         NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
-            estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
+            estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
         } else if (ozonoBabor > ozonoEstribor) { // A mayor velocidad y diferencia, más brusco el giro
             ESP_LOGI(TAG, "O3B > 03E");
-            estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //-85;
+            estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //-85;
         } else {
             ESP_LOGI(TAG, "O3B < 03E");
-            estadoTimonExterno = (fmax(85, fmin(-85, (ozonoEstribor -ozonoBabor) * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //= 85;
+            estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //= 85;
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
         if (gpsspeed - gpsspeedAnt > 50 || gpsspeed > 50) {
@@ -2171,7 +2262,7 @@ void app_main(void)
         } else {
             estadoTimonInterno = 45;
         }
-        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO e INTERNO");
+        ESP_LOGI(TAG, "MUEVO TIMON EXTERNO A %d e INTERNO a %d", estadoTimonExterno, estadoTimonInterno);
         
         ESP_ERROR_CHECK(mcpwm_set_duty_in_us(MCPWM_UNIT_1, MCPWM_TIMER_0, MCPWM_OPR_A, convert_servo_180_angle_to_duty_us(estadoTimonExterno)));
         vTaskDelay(pdMS_TO_TICKS(200));
