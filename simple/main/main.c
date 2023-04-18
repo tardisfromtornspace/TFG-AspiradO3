@@ -172,12 +172,12 @@ static const char *TAG = "ServidorSimple";
         }                                  \
     }
 
-#define SDSMSPIN "4095" // TO-DO ajustar al PIN correcto
+#define SDSMSPIN "6875" // TO-DO ajustar al PIN correcto TO-DO AJUSTA PARA QUE ESTÉ EN SDKCONFIG
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 #include "minmea.h" /*TO-DO pásalo al parser de nmea*/
 #define UART UART_NUM_2
-#define TXD_PIN 16 // Necesario para cuando tengamos el SIM800
-#define RXD_PIN 3 // 17
+#define TXD_PIN 17 // Necesario para cuando tengamos el SIM800
+#define RXD_PIN 3 // 16
 static const int RX_BUF_SIZE = 4096;
 
 /* LED */
@@ -645,7 +645,7 @@ int sendData(const char* logName, const char* data)
 {
     const int len = strlen(data);
     const int txBytes = uart_write_bytes(UART, data, len);
-    ESP_LOGI(logName, "Wrote %d bytes", txBytes);
+    ESP_LOGI(logName, "Wrote %d bytes: %s", txBytes, data);
     return txBytes;
 }
 
