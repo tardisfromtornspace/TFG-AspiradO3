@@ -625,7 +625,7 @@ static void rx_task(void *arg)
         ESP_ERROR_CHECK(uart_get_buffered_data_len(UART, (size_t*)&length));
         length = uart_read_bytes(UART, esp_gps->buffer, RX_BUF_SIZE, 100 / portTICK_PERIOD_MS);
 
-//        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
+        ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
 
         /* make sure the line is a standard string TO-DO*/
         esp_gps->buffer[length] = '\0';
@@ -659,15 +659,52 @@ static void tx_task(void *arg)
     char mensajito2[494];
     char mensajito3[494];
     char mensajito4[494];
+    char mensajito5[494];
 
     char finDeMensaje[] = "";
     const char *mess;
     const char *mess2;
     const char *mess3;
     const char *mess4;
+    const char *mess5;
 
-    sprintf(mensajito, "AT+CPIN=%s", SDSMSPIN);
-    mess = strcat(mensajito, finDeMensaje); // TO-DO define PIN
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+    sprintf(mensajito, "AT%s", "\r\n");
+    mess = strcat(mensajito, finDeMensaje);
+    sendData(TX_TASK_TAG, mess);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+    sprintf(mensajito3, "AT+CPIN=%s\r\n", SDSMSPIN);
+    mess3 = strcat(mensajito3, finDeMensaje);
+    sendData(TX_TASK_TAG, mess3);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+    while(1){
+        sprintf(mensajito2, "AT+CSQ%s", "\r\n");
+        mess2 = strcat(mensajito2, finDeMensaje);
+        sendData(TX_TASK_TAG, mess2);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        sprintf(mensajito4, "AT+CCID%s", "\r\n");
+        mess4 = strcat(mensajito4, finDeMensaje);
+        sendData(TX_TASK_TAG, mess4);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CREG?\r\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        sprintf(mensajito5, "AT+COPS=?%s", "\r\n"); // AT+COPS? AT+CREG
+        mess5 = strcat(mensajito5, finDeMensaje);
+        sendData(TX_TASK_TAG, mess5);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        
+        
+    }
+
+/* TO-DO COMENTADO PARA TESTS
+    sprintf(mensajito, "AT+CPIN=%s\r\n", SDSMSPIN);
+    mess = strcat(mensajito, finDeMensaje);
     sendData(TX_TASK_TAG, mess);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
@@ -708,7 +745,7 @@ static void tx_task(void *arg)
     mess4 = strcat(mensajito4, finDeMensaje);
     sendData(TX_TASK_TAG, mess3);
 
-    sendData(TX_TASK_TAG, mess4); // TO-DO a lol mejor es v1/devices/me/telemetry también
+    sendData(TX_TASK_TAG, mess4); // TO-DO a lo mejor es v1/devices/me/telemetry también
     vTaskDelay(6000 / portTICK_PERIOD_MS);
 
     sendData(TX_TASK_TAG, "AT+CIPSEND"); // Mandar datos al servidor remoto
@@ -746,18 +783,19 @@ static void tx_task(void *arg)
 
         free(post_data);
     }
+    */
 }
 /*
 void test_sim800_module()
 {
-  Serial2.println("AT");
+  Serial2.println("AT"); // Testing succesfull handshake
   updateSerial();
   Serial.println();
-  Serial2.println("AT+CSQ");
+  Serial2.println("AT+CSQ"); // Signal quality test
   updateSerial();
-  Serial2.println("AT+CCID");
+  Serial2.println("AT+CCID"); // Read SIM info to confirm it's plugged in
   updateSerial();
-  Serial2.println("AT+CREG?");
+  Serial2.println("AT+CREG?"); // Cofirm it is registered
   updateSerial();
   Serial2.println("ATI");
   updateSerial();
@@ -768,7 +806,7 @@ void test_sim800_module()
 */
 void send_SMS(const char* logName, const char* data){ // TO-DO para esto a lo mejor tener una segunda placa que leyese el SMS y luego por Wi-Fi comunicara los datos al Thingsboard
     sendData(logName, "AT+CMGF=1"); // Configuring TEXT mode
-    sendData(logName, "AT+CMGS=\"+919804049270\"");//change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
+    sendData(logName, "AT+CMGS=\"+34634723664\"");// 919804049270 change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
     sendData(logName, data);
     // Enviar Ctrl+Z
     //char mensajito[2];
@@ -2076,6 +2114,10 @@ void app_main(void)
     int ozonoBaborC = -1;
     int ozonoEstriborC = -1;
     int ozonoTrasFiltroC  = -1;
+
+    while(1){ // TO-DO quitar de la version final
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 
     while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
         ESP_LOGI(TAG, "Procedo a leer ADC 0 (CALIBRACION)");
