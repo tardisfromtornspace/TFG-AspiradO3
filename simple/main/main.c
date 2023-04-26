@@ -649,6 +649,22 @@ int sendData(const char* logName, const char* data)
     return txBytes;
 }
 
+void send_SMS(const char* logName, const char* telefono, const char* data){ // TO-DO para esto a lo mejor tener una segunda placa que leyese el SMS y luego por Wi-Fi comunicara los datos al Thingsboard
+    sendData(logName, "AT+CMGF=1\r\n"); // Configuring TEXT mode
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    sendData(logName, "AT+CMGS=\"+034634723664\"\r\n");// +34634723664     919804049270 change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    sendData(logName, data);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    sendData(logName, data);
+    // Enviar Ctrl+Z en una nueva línea vacía
+    const char *mess = "\r\n\032";
+    ESP_LOGI(logName, "Escribiendo el ctrl+z");
+    sendData(logName, mess);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+}
+
 static void tx_task(void *arg)
 {
     static const char *TX_TASK_TAG = "TX_TASK";
@@ -680,25 +696,124 @@ static void tx_task(void *arg)
     sendData(TX_TASK_TAG, mess3);
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
-    while(1){
-        sprintf(mensajito2, "AT+CSQ%s", "\r\n");
-        mess2 = strcat(mensajito2, finDeMensaje);
-        sendData(TX_TASK_TAG, mess2);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    sprintf(mensajito2, "AT+CSQ%s", "\r\n");
+    mess2 = strcat(mensajito2, finDeMensaje);
+    sendData(TX_TASK_TAG, mess2);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        sprintf(mensajito4, "AT+CCID%s", "\r\n");
-        mess4 = strcat(mensajito4, finDeMensaje);
-        sendData(TX_TASK_TAG, mess4);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    sendData(TX_TASK_TAG, "AT+CCID\r\n");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CREG?\r\n");
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    sprintf(mensajito5, "AT+COPS?%s", "\r\n"); // AT+COPS=? AT+COPS? AT+CREG
+    mess5 = strcat(mensajito5, finDeMensaje);
+    sendData(TX_TASK_TAG, mess5);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    while(1){
+        
+        sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CCID\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CREG?\r\n");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
 
-        sprintf(mensajito5, "AT+COPS=?%s", "\r\n"); // AT+COPS? AT+CREG
+        sprintf(mensajito5, "AT+COPS?%s", "\r\n"); // AT+COPS=? AT+COPS? AT+CREG
         mess5 = strcat(mensajito5, finDeMensaje);
         sendData(TX_TASK_TAG, mess5);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+HTTPSSL=?\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        // TO-DO antes de todo las de abajo, comprúebalas, sus valores y lo que hacen, o si hacen falta con tu tarjeta de lowi
+        sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CIPMUX=0\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\"\r\n"); // TO-DO La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CIICR\r\n"); // Conexion inalámbrica
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CIFSR\r\n"); // IP local
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CIPSPRT=0\r\n"); // TO-DO
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+HTTPINIT\r\n"); // INICIAR CLIENTE HTTP, EMITIR POST
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CID\",1\r\n"); // TO-DO
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        // Test del GET
+        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"URL\",\"http://www.edu4java.com/es/web/web30.html\"\r\n");
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+HTTPACTION=0\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
         
+
+        //sprintf(mensajito5, "AT+HTTPPARA=\"URL\",\"http://demo.thingsboard.io/api/v1/%s/telemetry\"\r\n", TOKENMQTT); // TO-DO
+        //mess5 = strcat(mensajito5, finDeMensaje);
+        //sendData(TX_TASK_TAG, mess5);
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"); // CONTENT indica el Content-Type. En formato json
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "AT+HTTPDATA=17,10000\r\n"); // 17 BYTES EN 10 SEGUNDOS
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "{\"tempAtmos\": 34}"); // En formato json son 17 bytes
+        //vTaskDelay(11000 / portTICK_PERIOD_MS); // Espero el tiempo indicado
+
+        //sendData(TX_TASK_TAG, "AT+HTTPACTION=1\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+HTTPREAD\r\n"); // Leer los datos tras ejecutar
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+HTTPTERM\r\n"); // Terminar servicio HTTP
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+//{"location_id": 238, "fill_percent": 90}
+
+ // 19 bytes
+
+
+
+
+
+//curl -v --ssl-no-revoke POST -d "{\"tempAtmos\": 34}" "https://demo.thingsboard.io/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry" --header "Content-Type:application/json"
+//        POST -d "{\"tempAtmos\": 34}\r\n" "https://demo.thingsboard.io/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry" --header "Content-Type:application/json"
+
+     //   sprintf(mensajito4, "AT+CIPSTART\"TCP\",\"%s/sensor/%s/data\",\"1883\"\r\n", MQTTURI, TOKENMQTT);
+     //   mess4 = strcat(mensajito4, finDeMensaje);
+
+     //   sendData(TX_TASK_TAG, mess4); // TO-DO a lo mejor es v1/devices/me/telemetry también http(s)://host:port/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry
+     //   vTaskDelay(6000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "AT+CIPSEND"); // Mandar datos al servidor remoto
+        //vTaskDelay(4000 / portTICK_PERIOD_MS);
+        
+        //send_SMS(TX_TASK_TAG, "+034634723664", "Hola Mundo\r\n");
+        //vTaskDelay(10000 / portTICK_PERIOD_MS);
         
     }
 
@@ -745,7 +860,7 @@ static void tx_task(void *arg)
     mess4 = strcat(mensajito4, finDeMensaje);
     sendData(TX_TASK_TAG, mess3);
 
-    sendData(TX_TASK_TAG, mess4); // TO-DO a lo mejor es v1/devices/me/telemetry también
+    sendData(TX_TASK_TAG, mess4); // TO-DO a lo mejor es v1/devices/me/telemetry también http(s)://host:port/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry
     vTaskDelay(6000 / portTICK_PERIOD_MS);
 
     sendData(TX_TASK_TAG, "AT+CIPSEND"); // Mandar datos al servidor remoto
@@ -804,19 +919,7 @@ void test_sim800_module()
 }
 
 */
-void send_SMS(const char* logName, const char* data){ // TO-DO para esto a lo mejor tener una segunda placa que leyese el SMS y luego por Wi-Fi comunicara los datos al Thingsboard
-    sendData(logName, "AT+CMGF=1"); // Configuring TEXT mode
-    sendData(logName, "AT+CMGS=\"+34634723664\"");// 919804049270 change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
-    sendData(logName, data);
-    // Enviar Ctrl+Z
-    //char mensajito[2];
-    //char finDeMensaje[] = "";
-    const char *mess = CTRLZ;
-    //sprintf(mensajito, "%c", CTRLZ);
-    //mess = strcat(mensajito, finDeMensaje);
-    sendData(logName, mess); // Ctrl +C according to the manual
 
-}
 /*MOTORES*/
 
 static void blink_motorAspirador(void)
