@@ -104,7 +104,10 @@
  * handlers and start an HTTPS server.
  */
 
-static const char *TAG = "ServidorSimple";
+static const char *TAG = "ApiradO3";
+
+xSemaphoreHandle Semaphore; // TO-DO SEMAFORO
+int enEllo = 0;
 
 /* Motores AspiradO3 */
 // WIP Arreglar conflicto con el LED
@@ -701,50 +704,105 @@ static void tx_task(void *arg)
     sendData(TX_TASK_TAG, mess2);
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
+    sendData(TX_TASK_TAG, "AT+CPIN?\r\n");
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
     sendData(TX_TASK_TAG, "AT+CCID\r\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CGREG=1\r\n");
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+CREG=1\r\n");
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     sendData(TX_TASK_TAG, "AT+CREG?\r\n");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
-    sprintf(mensajito5, "AT+COPS?%s", "\r\n"); // AT+COPS=? AT+COPS? AT+CREG
-    mess5 = strcat(mensajito5, finDeMensaje);
-    sendData(TX_TASK_TAG, mess5);
+    sendData(TX_TASK_TAG, "AT+CGREG?\r\n");
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+    sendData(TX_TASK_TAG, "AT+COPS?\r\n");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
     while(1){
         
         sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CCID\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CREG?\r\n");
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+CPIN?\r\n");
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
-        sprintf(mensajito5, "AT+COPS?%s", "\r\n"); // AT+COPS=? AT+COPS? AT+CREG
-        mess5 = strcat(mensajito5, finDeMensaje);
-        sendData(TX_TASK_TAG, mess5);
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        //sprintf(mensajito3, "AT+CPIN=%s\r\n", SDSMSPIN);
+        //mess3 = strcat(mensajito3, finDeMensaje);
+        //sendData(TX_TASK_TAG, mess3);
+        //vTaskDelay(4000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //sendData(TX_TASK_TAG, "AT+CREG=1\r\n");
+        //vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+HTTPSSL=?\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //sendData(TX_TASK_TAG, "AT+CREG?\r\n");
+        //vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "AT+CGREG=1\r\n");
+        //vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "AT+CGREG?\r\n");
+        //vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+COPS?\r\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CSQ\r\n");
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CGDCONT=1,\"IP\",\"mms.vodafone.net\"\r\n"); // Contexto PHP
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CGACT=1,1\r\n"); // Seleccionar contexto PHP
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CEER\r\n"); // Contexto de errores extendido para nuestro error
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CGPADDR=1\r\n"); // Recibir IP, versión 2 TO-DO PRUEBA ANTES DEL CGAT
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+      //  sendData(TX_TASK_TAG, "AT+CGDCONT?\r\n"); // VER
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        //sendData(TX_TASK_TAG, "AT+CGDATA=\"PPP\",1\r\n"); // VER
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+        
+
+      //  sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión
+      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
+        
+        
+
+// to-do eh
+        //sendData(TX_TASK_TAG, "AT+HTTPSSL=?\r\n");
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
 
         // TO-DO antes de todo las de abajo, comprúebalas, sus valores y lo que hacen, o si hacen falta con tu tarjeta de lowi
-        sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //xSemaphoreTake(Semaphore, portMAX_DELAY); // TO-DO Semaforo
 
-        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión
+        vTaskDelay(500 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CIPMUX=0\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\"\r\n"); // TO-DO La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
+        sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\"\r\n"); // TO-DO PUEDE QUE REQUIERA DE USR Y PASS La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CIICR\r\n"); // Conexion inalámbrica
@@ -753,122 +811,49 @@ static void tx_task(void *arg)
         sendData(TX_TASK_TAG, "AT+CIFSR\r\n"); // IP local
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CIPSPRT=0\r\n"); // TO-DO
+        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r\n"); // test SAPBR
         vTaskDelay(5000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+SAPBR=3,1,\"APN\",\"mms.vodafone.net\"\r\n"); // Estado de la conexión
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+SAPBR=1,1\r\n"); // Estado de la conexión
+        vTaskDelay(15000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+SAPBR=2,1\r\n"); // Estado de la conexión
+        vTaskDelay(15000 / portTICK_PERIOD_MS);
+
+
+        sendData(TX_TASK_TAG, "AT+CIPSPRT=0\r\n"); // TO-DO
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+        //sprintf(mensajito4, "AT+CIPSTART=\"TCP\",\"http://demo.thingsboard.io/\",\"80\"\r\n");
+        //mess4 = strcat(mensajito4, finDeMensaje);
+        //sendData(TX_TASK_TAG, mess4);
+        //vTaskDelay(6000 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+HTTPINIT\r\n"); // INICIAR CLIENTE HTTP, EMITIR POST
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CID\",1\r\n"); // TO-DO
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         // Test del GET
-        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"URL\",\"http://www.edu4java.com/es/web/web30.html\"\r\n");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        sendData(TX_TASK_TAG, "AT+HTTPACTION=0\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //sendData(TX_TASK_TAG, "AT+HTTPPARA=\"URL\",\"http://www.edu4java.com/es/web/web30.html\"\r\n");
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+        //sendData(TX_TASK_TAG, "AT+HTTPACTION=0\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
+        //vTaskDelay(5000 / portTICK_PERIOD_MS);
         
 
-        //sprintf(mensajito5, "AT+HTTPPARA=\"URL\",\"http://demo.thingsboard.io/api/v1/%s/telemetry\"\r\n", TOKENMQTT); // TO-DO
-        //mess5 = strcat(mensajito5, finDeMensaje);
-        //sendData(TX_TASK_TAG, mess5);
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
+        sprintf(mensajito5, "AT+HTTPPARA=\"URL\",\"http://demo.thingsboard.io/api/v1/%s/telemetry\"\r\n", TOKENMQTT); // TO-DO
+        mess5 = strcat(mensajito5, finDeMensaje);
+        sendData(TX_TASK_TAG, mess5);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        //sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"); // CONTENT indica el Content-Type. En formato json
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+HTTPDATA=17,10000\r\n"); // 17 BYTES EN 10 SEGUNDOS
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "{\"tempAtmos\": 34}"); // En formato json son 17 bytes
-        //vTaskDelay(11000 / portTICK_PERIOD_MS); // Espero el tiempo indicado
-
-        //sendData(TX_TASK_TAG, "AT+HTTPACTION=1\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        sendData(TX_TASK_TAG, "AT+HTTPREAD\r\n"); // Leer los datos tras ejecutar
+        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"); // CONTENT indica el Content-Type. En formato json
         vTaskDelay(5000 / portTICK_PERIOD_MS);
+/* TO-DO AJUSTA PARA QUE PUEDA ENVIAR EL JSON ENTERO*/
 
-        sendData(TX_TASK_TAG, "AT+HTTPTERM\r\n"); // Terminar servicio HTTP
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-//{"location_id": 238, "fill_percent": 90}
-
- // 19 bytes
-
-
-
-
-
-//curl -v --ssl-no-revoke POST -d "{\"tempAtmos\": 34}" "https://demo.thingsboard.io/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry" --header "Content-Type:application/json"
-//        POST -d "{\"tempAtmos\": 34}\r\n" "https://demo.thingsboard.io/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry" --header "Content-Type:application/json"
-
-     //   sprintf(mensajito4, "AT+CIPSTART\"TCP\",\"%s/sensor/%s/data\",\"1883\"\r\n", MQTTURI, TOKENMQTT);
-     //   mess4 = strcat(mensajito4, finDeMensaje);
-
-     //   sendData(TX_TASK_TAG, mess4); // TO-DO a lo mejor es v1/devices/me/telemetry también http(s)://host:port/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry
-     //   vTaskDelay(6000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+CIPSEND"); // Mandar datos al servidor remoto
-        //vTaskDelay(4000 / portTICK_PERIOD_MS);
-        
-        //send_SMS(TX_TASK_TAG, "+034634723664", "Hola Mundo\r\n");
-        //vTaskDelay(10000 / portTICK_PERIOD_MS);
-        
-    }
-
-/* TO-DO COMENTADO PARA TESTS
-    sprintf(mensajito, "AT+CPIN=%s\r\n", SDSMSPIN);
-    mess = strcat(mensajito, finDeMensaje);
-    sendData(TX_TASK_TAG, mess);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    //https://www.youtube.com/watch?v=aYQKJFromXs
-
-    sprintf(mensajito2, "AT+CREG=1"); // TO-DO
-    mess2 = strcat(mensajito2, finDeMensaje);
-    sendData(TX_TASK_TAG, mess2);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sprintf(mensajito3, "AT+CGATT=%s", SDSMSPIN);
-    mess3 = strcat(mensajito3, finDeMensaje);
-    sendData(TX_TASK_TAG, mess3);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIPSHUT");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIPSTATUS");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIPMUX=0");
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\""); // TO-DO La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIICR"); // Conexion inalámbrica
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIFSR"); // IP local
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIPSPRT=0"); // TO-DO
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    
-    sprintf(mensajito4, "AT+CIPSTART\"TCP\",\"%s/sensor/%s/data\",\"1883\"", MQTTURI, TOKENMQTT);
-    mess4 = strcat(mensajito4, finDeMensaje);
-    sendData(TX_TASK_TAG, mess3);
-
-    sendData(TX_TASK_TAG, mess4); // TO-DO a lo mejor es v1/devices/me/telemetry también http(s)://host:port/api/v1/YSRNEFDXnyIGhX9OaylG/telemetry
-    vTaskDelay(6000 / portTICK_PERIOD_MS);
-
-    sendData(TX_TASK_TAG, "AT+CIPSEND"); // Mandar datos al servidor remoto
-    vTaskDelay(4000 / portTICK_PERIOD_MS);
-
-    while (1) {
-        sendData(TX_TASK_TAG, "Hello world"); // TO-DO reemplazar por el string de datos que me interesa (el de mqtt_app_start)
-        // TO-DO meter de una forma que no duplique código
         cJSON *root = cJSON_CreateObject();
 
         cJSON_AddNumberToObject(root, "ozonoBabor", ozonoBabor);                       // En p.p.m.
@@ -885,40 +870,37 @@ static void tx_task(void *arg)
         cJSON_AddNumberToObject(root, "velocidadGNSS", gpsspeed);                      // Nudos
         cJSON_AddNumberToObject(root, "orientacionGNSS", gpscourse);                   // Grados
 
-        char *post_data = cJSON_PrintUnformatted(root);
+        const char *post_data = cJSON_PrintUnformatted(root);
+        int tamanio = strlen(post_data);
+
         // Enviar los datos
-        // TO-DO ver un try-except o simialr, si da error entonces paso los datos por GSM
-      //  esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
-        cJSON_Delete(root);
-        // Free is intentional, it's client responsibility to free the result of cJSON_Print
+        sprintf(mensajito4, "AT+HTTPDATA=%d,10000\r\n", tamanio);
+        mess4 = strcat(mensajito4, finDeMensaje);
+        sendData(TX_TASK_TAG, mess4);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, post_data); // En formato json son 17 bytes
+        vTaskDelay(11000 / portTICK_PERIOD_MS); // Espero el tiempo indicado
+
+        sendData(TX_TASK_TAG, "AT+HTTPACTION=1\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
         
-    
-        sendData(TX_TASK_TAG, post_data); // TO-DO reemplazar por el string de datos que me interesa (el de mqtt_start)
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        cJSON_Delete(root);
 
-        free(post_data);
+        sendData(TX_TASK_TAG, "AT+HTTPREAD\r\n"); // Leer los datos tras ejecutar
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+        sendData(TX_TASK_TAG, "AT+HTTPTERM\r\n"); // Terminar servicio HTTP
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        
+        //send_SMS(TX_TASK_TAG, "+034634723664", "Hola Mundo\r\n");
+        //vTaskDelay(10000 / portTICK_PERIOD_MS);
+
+        enEllo = 0;
+        
     }
-    */
-}
-/*
-void test_sim800_module()
-{
-  Serial2.println("AT"); // Testing succesfull handshake
-  updateSerial();
-  Serial.println();
-  Serial2.println("AT+CSQ"); // Signal quality test
-  updateSerial();
-  Serial2.println("AT+CCID"); // Read SIM info to confirm it's plugged in
-  updateSerial();
-  Serial2.println("AT+CREG?"); // Cofirm it is registered
-  updateSerial();
-  Serial2.println("ATI");
-  updateSerial();
-  Serial2.println("AT+CBC");
-  updateSerial();
 }
 
-*/
 
 /*MOTORES*/
 
@@ -1282,7 +1264,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
     mqtt_event_handler_cb(event_data);
 }
-static void mqtt_app_start(void)
+static int mqtt_app_start(void)
 {
     // Crear json que se quiere enviar al ThingsBoard
     cJSON *root = cJSON_CreateObject();
@@ -1304,10 +1286,12 @@ static void mqtt_app_start(void)
     char *post_data = cJSON_PrintUnformatted(root);
     // Enviar los datos
     // TO-DO ver un try-except o simialr, si da error entonces paso los datos por GSM
-    esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
+    int errorcillo = esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
     cJSON_Delete(root);
     // Free is intentional, it's client responsibility to free the result of cJSON_Print
     free(post_data);
+
+    return errorcillo;
 }
 
 // ADC
@@ -2174,6 +2158,10 @@ void app_main(void)
     // TEST MOTOR ASPIRADOR TO-DO TO VERIFY
     s_aspirador_state = true;
     blink_motorAspirador();
+
+    // SEMAFOROS
+    Semaphore = xSemaphoreCreateBinary();
+
     // TO-DO TESTS DE LOS OTROS DOS MOTORES
 
     // Task mqtt? TO-DO?
@@ -2267,9 +2255,20 @@ void app_main(void)
     count++;
     }
     ESP_LOGI(TAG, "Calibracion COMPLETADA tras %d segundos", count);
+    /* SECCION DE CALIBRACION DE SENSORES DE OZONO ON-THE-FLY */
     double R0babor = getResistencia(ozonoBaborC, RESLBABOR);
     double R0estribor = getResistencia(ozonoBaborC, RESLESTRIBOR);
     double R0trasFiltro = getResistencia(ozonoBaborC, RESLTRASFILTRO);
+
+    double correccionSensorBabor = 0.0 ;
+    double correccionSensorEstribor = 0.0;
+    double correccionSensorTrasFiltro = 0.0;
+    int corrInicialSensorMayor = 0;
+    int corrInicialSensorMedio = 0;
+    int corrInicialSensorMenor = 0;
+    double multCorrEstribor = 1.0;
+    double multCorrBabor = 1.0;
+    double multCorrTrasFiltro = 1.0;
 
 
     /*
@@ -2359,30 +2358,19 @@ void app_main(void)
         ESP_LOGI(TAG, "Procedo a leer I2C de ADCs ozono");
         ESP_LOGI(TAG, "Procedo a leer ADC 0");
         //int ozonoAux = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA3, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
-        ozonoBabor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ozonoBaborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ESP_LOGI(TAG, "Procedo a leer ADC 1");
-        ozonoEstribor = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ozonoEstriborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ESP_LOGI(TAG, "Procedo a leer ADC 2");
-        ozonoTrasFiltro = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA2, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
+        ozonoTrasFiltroC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA2, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
 
         vTaskDelay(pdMS_TO_TICKS(1000)); // El I2C puede tardar hasta 11 segundos
 
-        // TO-DO Ajustar correciones
-        double correccionSensorBabor = 0.0 ; // Un test, estos 2000 no valen apra nada
-        double correccionSensorEstribor = 0.0;
-        double correccionSensorTrasFiltro = 0.0;
-        int corrInicialSensorMayor = 0; // 2000
-        int corrInicialSensorMedio = 0;
-        int corrInicialSensorMenor = 0;
-        double multCorrEstribor = 1.0;
-        double multCorrBabor = 1.0;
-        double multCorrTrasFiltro = 1.0;
-
         /* FASE 3: AJUSTE DE LECTURAS DE OZONO */
 
-        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBabor +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor, RESLBABOR, R0babor); // TO-DO ajuste
-        ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstribor + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor, RESLESTRIBOR, R0estribor);
-        ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltro + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro, RESLTRASFILTRO, R0trasFiltro);
+        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBaborC +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor, RESLBABOR, R0babor); // TO-DO ajuste
+        ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstriborC + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor, RESLESTRIBOR, R0estribor);
+        ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltroC + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro, RESLTRASFILTRO, R0trasFiltro);
         ESP_LOGI(TAG, "correcion O3 babor: %d", ozonoBabor );
         ESP_LOGI(TAG, "correcion O3 estribor: %d", ozonoEstribor );
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
@@ -2450,7 +2438,13 @@ void app_main(void)
             /*
             *MQTT: los datos obtenidos los mandamos a Thingsboard
             */
-            mqtt_app_start();
+            int problemaWiFi = mqtt_app_start();
+            if (problemaWiFi == -1 && enEllo == 0) {
+                // Indico al GSM que debe enviarlo
+                enEllo = 1;
+                xSemaphoreGive(Semaphore);
+
+            }
             if (sleepEnabled) contadorAdormir++;
         }
 
