@@ -62,15 +62,10 @@
 
 // Para I2C
 #include "driver/i2c.h"
-// Para i2c test
-// #include "cmd_i2ctools.h"
 
-// Para SPI TO-DO comprobar? TO-DO USAR I2C SI NO NOS VIENE EL DE MIKROE
-// https://es.rs-online.com/web/p/circuitos-integrados-de-sensores-ambientales/2395623
 #include "driver/spi_master.h"
 
 // Para GPS
-// TO-DO usar el código de uart nmea_example?
 #include "nmea_parser.h"
 
 // Para mensajes genéricos
@@ -137,7 +132,6 @@ int enEllo = 0;
 #define PIN_NUM_CLK  19
 #define PIN_NUM_CS   22
 */
-// TO-DO prueba con adc primero
 /* COSAS MATEMÁTICAS Y DE COMPONENTE MISCELÁNEO*/
 #define E 2.718281828459
 #define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
@@ -175,9 +169,11 @@ int enEllo = 0;
         }                                  \
     }
 
-#define SDSMSPIN "6875" // TO-DO ajustar al PIN correcto TO-DO AJUSTA PARA QUE ESTÉ EN SDKCONFIG
+#define SDSMSPIN "6875" // TO-DO AJUSTA PARA QUE ESTÉ EN SDKCONFIG
+#define APN "mms.vodafone.net" // TO-DO AJUSTA PARA QUE ESTÉ EN SDKCONFIG
+
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
-#include "minmea.h" /*TO-DO pásalo al parser de nmea*/
+#include "minmea.h"
 #define UART UART_NUM_2
 #define TXD_PIN 17 // Necesario para cuando tengamos el SIM800
 #define RXD_PIN 3 // 16
@@ -210,9 +206,7 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 #define CO2_SENSOR_ADDR 0x5A /*!< Slave address of the CO2 sensor is 0x5A, when we add an additional binary 1 behind it transforms into 0xB5 */
 #define CO2_REG_ADDR 0x5A    /*!< Register addresses of the CO2 lecture register */
 
-// TO-DO hacer algo para elegir 3 sensores diferentes (p.ej usar 3 pines diferentes del ESP-32 que estén conectados con un AND al SDA: SDA ESP y uno de los pines ==D--- SDA modulo)
-#define O3_SENSOR_ADDR 0x33 
-// TO-DO si utilizamos el sensor https://es.rs-online.com/web/p/circuitos-integrados-de-sensores-ambientales/2395623 en vez del de Mikroe tenemos la traba de que sus registros I2C no son públicos y requerimos de un NDA TO-DO
+#define O3_SENSOR_ADDR 0x33 /* TO-DO Si el sensor de O3 se usa por ADC esto no se necesita BORRAR EN LA VERSIÓN FINAL*/
 #define O3_SENSOR_REGISTER 0x97
 
 #define TEMPHUM_SENSOR_ADDR 0x44 /*Dir sensor tempHum*/
@@ -271,7 +265,6 @@ Por lo tanto tenemos
 #define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
 static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 #else
-// TO-DO ver compatibilidad
 #define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
 static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 #endif
@@ -652,10 +645,10 @@ int sendData(const char* logName, const char* data)
     return txBytes;
 }
 
-void send_SMS(const char* logName, const char* telefono, const char* data){ // TO-DO para esto a lo mejor tener una segunda placa que leyese el SMS y luego por Wi-Fi comunicara los datos al Thingsboard
+void send_SMS(const char* logName, const char* telefono, const char* data){
     sendData(logName, "AT+CMGF=1\r\n"); // Configuring TEXT mode
     vTaskDelay(10000 / portTICK_PERIOD_MS);
-    sendData(logName, "AT+CMGS=\"+034634723664\"\r\n");// +34634723664     919804049270 change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
+    sendData(logName, "AT+CMGS=\"+034634723664\"\r\n"); // change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
     vTaskDelay(10000 / portTICK_PERIOD_MS);
     sendData(logName, data);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -689,9 +682,10 @@ static void tx_task(void *arg)
 
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
-    sprintf(mensajito, "AT%s", "\r\n");
-    mess = strcat(mensajito, finDeMensaje);
-    sendData(TX_TASK_TAG, mess);
+    /* Fase de comprobación y registro en la SIM */
+    //sprintf(mensajito, "AT%s", "\r\n");
+    //mess = strcat(mensajito, finDeMensaje);
+    sendData(TX_TASK_TAG, "AT\r\n");
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
     sprintf(mensajito3, "AT+CPIN=%s\r\n", SDSMSPIN);
@@ -699,9 +693,9 @@ static void tx_task(void *arg)
     sendData(TX_TASK_TAG, mess3);
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
-    sprintf(mensajito2, "AT+CSQ%s", "\r\n");
-    mess2 = strcat(mensajito2, finDeMensaje);
-    sendData(TX_TASK_TAG, mess2);
+    //sprintf(mensajito2, "AT+CSQ%s", "\r\n");
+    //mess2 = strcat(mensajito2, finDeMensaje);
+    sendData(TX_TASK_TAG, "AT+CSQ\r\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     sendData(TX_TASK_TAG, "AT+CPIN?\r\n");
@@ -736,124 +730,70 @@ static void tx_task(void *arg)
         sendData(TX_TASK_TAG, "AT+CPIN?\r\n");
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
-        //sprintf(mensajito3, "AT+CPIN=%s\r\n", SDSMSPIN);
-        //mess3 = strcat(mensajito3, finDeMensaje);
-        //sendData(TX_TASK_TAG, mess3);
-        //vTaskDelay(4000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+CREG=1\r\n");
-        //vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+CREG?\r\n");
-        //vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+CGREG=1\r\n");
-        //vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+CGREG?\r\n");
-        //vTaskDelay(1000 / portTICK_PERIOD_MS);
-
         sendData(TX_TASK_TAG, "AT+COPS?\r\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-      //  sendData(TX_TASK_TAG, "AT+CSQ\r\n");
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-      //  sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-      //  sendData(TX_TASK_TAG, "AT+CGDCONT=1,\"IP\",\"mms.vodafone.net\"\r\n"); // Contexto PHP
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-      //  sendData(TX_TASK_TAG, "AT+CGACT=1,1\r\n"); // Seleccionar contexto PHP
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-      //  sendData(TX_TASK_TAG, "AT+CEER\r\n"); // Contexto de errores extendido para nuestro error
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-      //  sendData(TX_TASK_TAG, "AT+CGPADDR=1\r\n"); // Recibir IP, versión 2 TO-DO PRUEBA ANTES DEL CGAT
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-      //  sendData(TX_TASK_TAG, "AT+CGDCONT?\r\n"); // VER
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        //sendData(TX_TASK_TAG, "AT+CGDATA=\"PPP\",1\r\n"); // VER
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
         
-
-      //  sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión
-      //  vTaskDelay(5000 / portTICK_PERIOD_MS);
-        
-        
-
-// to-do eh
-        //sendData(TX_TASK_TAG, "AT+HTTPSSL=?\r\n");
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        // TO-DO antes de todo las de abajo, comprúebalas, sus valores y lo que hacen, o si hacen falta con tu tarjeta de lowi
         //xSemaphoreTake(Semaphore, portMAX_DELAY); // TO-DO Semaforo
 
+        /* Etapa de conexión IP */
         sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión
+        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión TO-DO coméntalos y pruébalo
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CIPMUX=0\r\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\"\r\n"); // TO-DO PUEDE QUE REQUIERA DE USR Y PASS La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
 
+        sprintf(mensajito, "AT+CSTT=\"%s\"\r\n", APN);
+        mess = strcat(mensajito, finDeMensaje);
+        sendData(TX_TASK_TAG, mess); // TO-DO comprobar
+        //sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\"\r\n"); // PUEDE QUE REQUIERA DE USR Y PASS La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
         sendData(TX_TASK_TAG, "AT+CIICR\r\n"); // Conexion inalámbrica
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-
         sendData(TX_TASK_TAG, "AT+CIFSR\r\n"); // IP local
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión
+        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión TO-DO coméntalos y pruébalo
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r\n"); // test SAPBR
+        /* Etapa conexión TCP/UDP y cliente-servidor */
+        sendData(TX_TASK_TAG, "AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r\n");
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         sendData(TX_TASK_TAG, "AT+SAPBR=3,1,\"APN\",\"mms.vodafone.net\"\r\n"); // Estado de la conexión
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-        sendData(TX_TASK_TAG, "AT+SAPBR=1,1\r\n"); // Estado de la conexión
+        sendData(TX_TASK_TAG, "AT+SAPBR=1,1\r\n");
         vTaskDelay(15000 / portTICK_PERIOD_MS);
-        sendData(TX_TASK_TAG, "AT+SAPBR=2,1\r\n"); // Estado de la conexión
+        sendData(TX_TASK_TAG, "AT+SAPBR=2,1\r\n");
         vTaskDelay(15000 / portTICK_PERIOD_MS);
 
+        /* Permite comunicación GPS de latitud, longitud y fecha-tiempo
+        sendData(TX_TASK_TAG, "AT+CIPGSMLOC=1,1\r\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        */
 
-        sendData(TX_TASK_TAG, "AT+CIPSPRT=0\r\n"); // TO-DO
+        sendData(TX_TASK_TAG, "AT+CIPSPRT=0\r\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        //sprintf(mensajito4, "AT+CIPSTART=\"TCP\",\"http://demo.thingsboard.io/\",\"80\"\r\n");
-        //mess4 = strcat(mensajito4, finDeMensaje);
-        //sendData(TX_TASK_TAG, mess4);
-        //vTaskDelay(6000 / portTICK_PERIOD_MS);
-
-        sendData(TX_TASK_TAG, "AT+HTTPINIT\r\n"); // INICIAR CLIENTE HTTP, EMITIR POST
+        /* Petición HTTP */
+        sendData(TX_TASK_TAG, "AT+HTTPINIT\r\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CID\",1\r\n"); // TO-DO
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CID\",1\r\n");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);     
 
-        // Test del GET
-        //sendData(TX_TASK_TAG, "AT+HTTPPARA=\"URL\",\"http://www.edu4java.com/es/web/web30.html\"\r\n");
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
-        //sendData(TX_TASK_TAG, "AT+HTTPACTION=0\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
-        //vTaskDelay(5000 / portTICK_PERIOD_MS);
-        
-
-        sprintf(mensajito5, "AT+HTTPPARA=\"URL\",\"http://demo.thingsboard.io/api/v1/%s/telemetry\"\r\n", TOKENMQTT); // TO-DO
+        sprintf(mensajito5, "AT+HTTPPARA=\"URL\",\"http://demo.thingsboard.io/api/v1/%s/telemetry\"\r\n", TOKENMQTT);
         mess5 = strcat(mensajito5, finDeMensaje);
         sendData(TX_TASK_TAG, mess5);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"); // CONTENT indica el Content-Type. En formato json
+        sendData(TX_TASK_TAG, "AT+HTTPPARA=\"CONTENT\",\"application/json\"\r\n"); // CONTENT indica el Content-Type.
         vTaskDelay(5000 / portTICK_PERIOD_MS);
-/* TO-DO AJUSTA PARA QUE PUEDA ENVIAR EL JSON ENTERO*/
 
+        /* Contenido json*/
         cJSON *root = cJSON_CreateObject();
 
         cJSON_AddNumberToObject(root, "ozonoBabor", ozonoBabor);                       // En p.p.m.
@@ -879,8 +819,8 @@ static void tx_task(void *arg)
         sendData(TX_TASK_TAG, mess4);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, post_data); // En formato json son 17 bytes
-        vTaskDelay(11000 / portTICK_PERIOD_MS); // Espero el tiempo indicado
+        sendData(TX_TASK_TAG, post_data);
+        vTaskDelay(11000 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+HTTPACTION=1\r\n"); // La acción HTTP es 0 = GET, 1=POST, 2=HEAD
         vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -1285,7 +1225,6 @@ static int mqtt_app_start(void)
 
     char *post_data = cJSON_PrintUnformatted(root);
     // Enviar los datos
-    // TO-DO ver un try-except o simialr, si da error entonces paso los datos por GSM
     int errorcillo = esp_mqtt_client_publish(client, "v1/devices/me/telemetry", post_data, 0, 1, 0); // En v1/devices/me/telemetry sale de la MQTT Device API Reference de ThingsBoard
     cJSON_Delete(root);
     // Free is intentional, it's client responsibility to free the result of cJSON_Print
@@ -1905,7 +1844,6 @@ void backtofactory()
 }
 
 // Configuración de los 4 pines analógicos
-// TO-DO AJUSTAR A SOLO 1 PIN ANALÓGICO EN CUANTO LOS ADC 12C FUNCIONEN
 static void configure_analog(void)
 {
     ESP_LOGI(TAG, "Configuring ESP32 analog pins");
@@ -2173,11 +2111,6 @@ void app_main(void)
     /*GPS*/
 
     /* NMEA parser configuration */
-    //nmea_parser_config_t configGPS = NMEA_PARSER_CONFIG_CUSTOM(); // Usamos configuración por defecto, GPIO 5 como RX
-    /* init NMEA parser library */
-    //nmea_parser_handle_t nmea_hdl = nmea_parser_init(&configGPS);
-    /* register event handler for NMEA parser library TO-DO VERIFICAR QUE CAPTA DATOS*/
-    //nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 /* DEL GITHUB DE OTRO COMPAÑERO*/
     init_uart();
 
@@ -2277,7 +2210,7 @@ void app_main(void)
     while (1)
     {
 
-        if (gpio_get_level(PIN_SWITCH)) // TO-DO AJUSTAR? 
+        if (gpio_get_level(PIN_SWITCH)) // TO-DO AJUSTAR? BORRAR DE LA VERSION FINAL
         {
 //            ESP_LOGI(TAG, "Switch display: ON");
             s_switch_state = true;
@@ -2323,7 +2256,7 @@ void app_main(void)
             }
         }
 
-        /* FASE 1: LECTURA ADC DE SENSORES MIKROE TO-DO AJUSTAR A I2C*/
+        /* FASE 1: LECTURA ADC DE PANEL SOLAR */
 
         ESP_LOGI(TAG, "Procedo a medir ADC ESP32");
 
@@ -2449,9 +2382,4 @@ void app_main(void)
         }
 
     }
-    /*GPS, deinicializar TO-DO no es necesario?*/
-    /* unregister event handler */
-    //nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
-    /* deinit NMEA parser library */
-    //nmea_parser_deinit(nmea_hdl);
 }
