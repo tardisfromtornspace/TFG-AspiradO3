@@ -734,7 +734,7 @@ static void tx_task(void *arg)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         
-        //xSemaphoreTake(Semaphore, portMAX_DELAY); // TO-DO Semaforo
+        xSemaphoreTake(Semaphore, portMAX_DELAY); // TO-DO Semaforo
 
         /* Etapa de conexión IP */
         sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
@@ -1974,9 +1974,9 @@ void app_main(void)
     /*
      * Información del sleep
      */
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
+    //struct timeval now;
+    //gettimeofday(&now, NULL);
+    //int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
     /*
      * Configurar periféricos, LED, motores y los inputs analógicos
      */
@@ -2139,9 +2139,9 @@ void app_main(void)
     int ozonoEstriborC = -1;
     int ozonoTrasFiltroC  = -1;
 
-    while(1){ // TO-DO quitar de la version final
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    //while(1){ // TO-DO quitar de la version final
+    //    vTaskDelay(pdMS_TO_TICKS(1000));
+    //}
 
     while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
         ESP_LOGI(TAG, "Procedo a leer ADC 0 (CALIBRACION)");
@@ -2334,52 +2334,16 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(200));
         ESP_ERROR_CHECK(mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, convert_servo_90_angle_to_duty_us(estadoTimonInterno)));
         vTaskDelay(pdMS_TO_TICKS(200)); //Add delay, since it takes time for servo to rotate, generally 100ms/60degree rotation under 5V power supply
-        /* FASE 5: EMISIÓN DE DATOS Y SLEEP */
-        /* TO-DO  AJUSTAR PARA INCLUIR GSM TAMBIÉN 
+
+        /*
+        *MQTT: los datos obtenidos los mandamos a Thingsboard
         */
-        // TO-DO probablemente borrar ya que requiere control de navegación
-        if (sleepEnabled && contadorAdormir > 15)
-        {
-            // Hora de dormir para ahorrar energía. Debe ser light sleep y no hacerse todo el rato para no hacer disrupción excesiva en las comunicaciones.
-            //esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000); 
-            printf("Entering light sleep\n");
-
-            /* To make sure the complete line is printed before entering sleep mode,
-             * need to wait until UART TX FIFO is empty:
-             */
-            //uart_wait_tx_idle_polling(CONFIG_ESP_CONSOLE_UART_NUM);
-
-            // esp_sleep_enable_wakeup_source(ESP_SLEEP_WAKEUP_GPIO);
-            //esp_light_sleep_start();
-
-            /* Get timestamp before entering sleep */
-            //int64_t t_before_us = esp_timer_get_time();
-
-            /* Enter sleep mode */
-            //esp_light_sleep_start();
-
-            /* Get timestamp after waking up from sleep */
-            //int64_t t_after_us = esp_timer_get_time();
-
-            /* Determine wake up reason */
-            //deQueMeLevante((t_after_us - t_before_us) / 1000);
-            vTaskDelay(pdMS_TO_TICKS(5000)); // Tras el sleep el wifi está caído, hay que darle tiempo para recuperarse
-            
-            contadorAdormir = 0;
+        int problemaWiFi = mqtt_app_start();
+        if (problemaWiFi == -1 && enEllo == 0) {
+            // Indico al GSM que debe enviarlo
+            enEllo = 1;
+            xSemaphoreGive(Semaphore);
         }
-        else {
-            /*
-            *MQTT: los datos obtenidos los mandamos a Thingsboard
-            */
-            int problemaWiFi = mqtt_app_start();
-            if (problemaWiFi == -1 && enEllo == 0) {
-                // Indico al GSM que debe enviarlo
-                enEllo = 1;
-                xSemaphoreGive(Semaphore);
-
-            }
-            if (sleepEnabled) contadorAdormir++;
-        }
-
+        if (sleepEnabled) contadorAdormir++;
     }
 }
