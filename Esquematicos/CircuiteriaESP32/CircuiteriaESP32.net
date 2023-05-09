@@ -1,7 +1,7 @@
 (export (version "E")
   (design
     (source "C:\\ASL\\Universidad\\4to_curso\\TFG\\Github\\TFG-AspiradO3\\Esquematicos\\CircuiteriaESP32\\CircuiteriaESP32.kicad_sch")
-    (date "08/05/2023 9:43:08")
+    (date "09/05/2023 9:06:31")
     (tool "Eeschema (7.0.0)")
     (sheet (number "1") (name "/") (tstamps "/")
       (title_block
@@ -93,7 +93,7 @@
       (tstamps "74ca5278-4cec-46a0-89e0-0530f6d09a61"))
     (comp (ref "D1")
       (value "D")
-      (footprint "Diode_THT:D_5KPW_P7.62mm_Vertical_AnodeUp")
+      (footprint "Diode_THT:D_T-1_P2.54mm_Vertical_AnodeUp")
       (fields
         (field (name "Sim.Device") "D")
         (field (name "Sim.Pins") "1=K 2=A"))
@@ -108,7 +108,7 @@
       (tstamps "db8137b0-fb31-48db-a03e-189ce74f918d"))
     (comp (ref "D2")
       (value "D")
-      (footprint "Diode_THT:D_5KPW_P7.62mm_Vertical_AnodeUp")
+      (footprint "Diode_THT:D_T-1_P2.54mm_Vertical_AnodeUp")
       (fields
         (field (name "Sim.Device") "D")
         (field (name "Sim.Pins") "1=K 2=A"))

@@ -663,7 +663,7 @@ void send_SMS(const char* logName, const char* telefono, const char* data){
 
 static void tx_task(void *arg)
 {
-    static const char *TX_TASK_TAG = "TX_TASK";
+    static const char *TX_TASK_TAG = "TX_TASK_GSM";
     esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
 
     /* La tarjeta a lo mejor requiere de un PIN */
@@ -733,7 +733,7 @@ static void tx_task(void *arg)
         sendData(TX_TASK_TAG, "AT+COPS?\r\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        
+        ESP_LOGI(TAG, "ESPERO A LLAMADA DEL SEMAFORO");
         xSemaphoreTake(Semaphore, portMAX_DELAY); // TO-DO Semaforo
 
         /* Etapa de conexión IP */
@@ -1766,6 +1766,12 @@ static void stop_webserver(httpd_handle_t server)
 static void disconnect_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
+    ESP_LOGI(TAG, "ME HE DESCONECTADO");
+    if (enEllo == 0){
+        enEllo = 1;
+        xSemaphoreGive(Semaphore);
+    }
+
     httpd_handle_t *server = (httpd_handle_t *)arg;
     if (*server)
     {
@@ -1777,6 +1783,7 @@ static void disconnect_handler(void *arg, esp_event_base_t event_base,
 static void connect_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data)
 {
+    ESP_LOGI(TAG, "ME HE CONECTADO"); // TO-DO verificar
     httpd_handle_t *server = (httpd_handle_t *)arg;
     if (*server == NULL)
     {
@@ -2059,10 +2066,14 @@ void app_main(void)
     printf("Minimum free heap size: %d bytes\n", esp_get_minimum_free_heap_size());
 
     static httpd_handle_t server = NULL;
+    
 
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    // SEMAFOROS
+    Semaphore = xSemaphoreCreateBinary();
 
     /*
      * Registrar handlers de evento para montar el servidor cuando se conectan el Wi-Di o Ethernet, y parar cuando se desconecta.
@@ -2097,8 +2108,7 @@ void app_main(void)
     s_aspirador_state = true;
     blink_motorAspirador();
 
-    // SEMAFOROS
-    Semaphore = xSemaphoreCreateBinary();
+
 
     // TO-DO TESTS DE LOS OTROS DOS MOTORES
 
@@ -2139,11 +2149,11 @@ void app_main(void)
     int ozonoEstriborC = -1;
     int ozonoTrasFiltroC  = -1;
 
-    //while(1){ // TO-DO quitar de la version final
-    //    vTaskDelay(pdMS_TO_TICKS(1000));
-    //}
+    while(1){ // TO-DO quitar de la version final
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
 
-    while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
+    /*while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
         ESP_LOGI(TAG, "Procedo a leer ADC 0 (CALIBRACION)");
         ozonoBaborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -2186,7 +2196,7 @@ void app_main(void)
         }
 
     count++;
-    }
+    }*/
     ESP_LOGI(TAG, "Calibracion COMPLETADA tras %d segundos", count);
     /* SECCION DE CALIBRACION DE SENSORES DE OZONO ON-THE-FLY */
     double R0babor = getResistencia(ozonoBaborC, RESLBABOR);
@@ -2338,12 +2348,13 @@ void app_main(void)
         /*
         *MQTT: los datos obtenidos los mandamos a Thingsboard
         */
+        ESP_LOGI(TAG, "TRATO DE MANDAR POR WI-FI");
         int problemaWiFi = mqtt_app_start();
-        if (problemaWiFi == -1 && enEllo == 0) {
+        if (problemaWiFi == -1 || enEllo == 1) {
             // Indico al GSM que debe enviarlo
-            enEllo = 1;
-            xSemaphoreGive(Semaphore);
+            ESP_LOGI(TAG, "MANDO POR GSM");
+        } else {
+            ESP_LOGI(TAG, "ENVIO WI-FI EXITOSO");
         }
-        if (sleepEnabled) contadorAdormir++;
     }
 }
