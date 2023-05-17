@@ -90,7 +90,7 @@
 
 // Para display
 #include "ssd1306.h"
-#include "font8x8_basic.h"
+//#include "font8x8_basic.h"
 
 // Para motores
 #include "driver/mcpwm.h"
@@ -308,9 +308,6 @@ int conproc = -1;
 static const char POSTUPDATES[] = "/bot" TELEGRAMTOKEN "/sendMessage?chat_id=" CHATTOKEN;
 
 // Sleeps
-static RTC_DATA_ATTR struct timeval sleep_enter_time; // global
-int contadorAdormir = 0;
-int sleepEnabled = 0; // Hemos dejado el sleep inhabilitado porque al final no es esencial
 int http2Caido = 0;
 
 // LEDes, motores y algunos datos
@@ -559,18 +556,18 @@ static void parse(char * line) {
             if (minmea_parse_gsv(&frame, line)) {
                 //printf("$GSV: message %d of %d\n", frame.msg_nr, frame.total_msgs);
                 printf("$GSV: satellites in view: %d\n", frame.total_sats);
-                //for (int i = 0; i < frame.total_sats; i++)
-                //    printf("$GSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
-                //        frame.sats[i].nr,
-                //        frame.sats[i].elevation,
-                //        frame.sats[i].azimuth,
-                //        frame.sats[i].snr);
+                for (int i = 0; i < frame.total_sats; i++)
+                    printf("$GSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm\n",
+                        frame.sats[i].nr,
+                        frame.sats[i].elevation,
+                        frame.sats[i].azimuth,
+                        frame.sats[i].snr);
             }
         } break;
 
         default:
-            //ESP_LOGI(tag, "DEFAULT");
-            //ESP_LOGD(tag, "Sentence - other");
+            //ESP_LOGI(TAG, "DEFAULT");
+            ESP_LOGD(TAG, "Sentence - other");
             break;
     }
 }
@@ -668,14 +665,12 @@ static void tx_task(void *arg)
 
     /* La tarjeta a lo mejor requiere de un PIN */
     char mensajito[494];
-    char mensajito2[494];
     char mensajito3[494];
     char mensajito4[494];
     char mensajito5[494];
 
     char finDeMensaje[] = "";
     const char *mess;
-    const char *mess2;
     const char *mess3;
     const char *mess4;
     const char *mess5;
@@ -683,8 +678,6 @@ static void tx_task(void *arg)
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
     /* Fase de comprobación y registro en la SIM */
-    //sprintf(mensajito, "AT%s", "\r\n");
-    //mess = strcat(mensajito, finDeMensaje);
     sendData(TX_TASK_TAG, "AT\r\n");
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
@@ -693,8 +686,6 @@ static void tx_task(void *arg)
     sendData(TX_TASK_TAG, mess3);
     vTaskDelay(4000 / portTICK_PERIOD_MS);
 
-    //sprintf(mensajito2, "AT+CSQ%s", "\r\n");
-    //mess2 = strcat(mensajito2, finDeMensaje);
     sendData(TX_TASK_TAG, "AT+CSQ\r\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
@@ -867,15 +858,6 @@ static void configure_motor_continuo(gpio_num_t pin)
     gpio_reset_pin(pin);
     /* Set the pin as a push/pull output */
     gpio_set_direction(pin, GPIO_MODE_OUTPUT);
-}
-
-// Switch, se usará para encender o apagar el LCD
-static void configure_switch(void)
-{
-    ESP_LOGI(TAG, "Example configured to switch GPIO!");
-    gpio_reset_pin(PIN_SWITCH);
-    /* Set the GPIO 34 as a push/pull output */
-    gpio_set_direction(PIN_SWITCH, GPIO_MODE_INPUT);
 }
 
 /**
@@ -1428,12 +1410,12 @@ int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t l
                                                     sh2lib_do_get(handle, str, handle_echo_response);
                                                     s_reset_state = 20;
                                                 }
-                                                /*else if (strcmp(auxMensaje, cmd4) == 0)
+                                                else if (strcmp(auxMensaje, cmd4) == 0)
                                                 {
-                                                    sprintf(str, "%s&text=%s : %s: %s Vsolar = %d, Vhidro = %d, Tox pre-filtro = %d, Tox post-filtro = %d. SwitchDisplay = %d", POSTUPDATES, auxMensaje, UNIVERSITY, cmd4Rep, voltajeSolar, voltajeHidro, datoI2CCO2legible, datoI2CFotonlegible, s_switch_state);
+                                                    sprintf(str, "%s&text=%s : %s: %s Vsolar = %d, O3 Babor = %d, O3 Estribor = %d, O3 post-filtro = %d. GPS = lat %2f lon %2f", POSTUPDATES, auxMensaje, UNIVERSITY, cmd4Rep, voltajeSolar, ozonoBabor, ozonoEstribor, ozonoTrasFiltro, gpslatitude, gpslongitude);
                                                     sh2lib_do_get(handle, str, handle_echo_response);
                                                     s_reset_state = 20;
-                                                }*/
+                                                }
                                                 // Las preguntas
                                                 else if (strcmp(auxMensaje, cmdP1) == 0)
                                                 {
@@ -1534,6 +1516,7 @@ static void set_time(void) // Tiempo es necesario para HTTP2
     sntp_init();
 }
 
+/* Estas funciones serán útiles para mejorar la seguridad, pero hasta entonces, no se usan*/
 static void http2_task(void *args)
 {
     /* Set current time: proper system time is required for TLS based
@@ -2005,16 +1988,11 @@ void app_main(void)
     configure_analog();
 
     // iniciar I2C
-    // Iniciar el display
+    // Iniciar el display TO-DO ver como borrar el display
     SSD1306_t dev;
     ESP_ERROR_CHECK(i2c_master_init(&dev, I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, 0));
     ESP_LOGI(TAG, "I2C initialized successfully");
     // Variables auxiliares del I2C display, e inicialización extra del display
-    char primeralineChar[32];
-    char segundalineChar[32];
-    char terceralineChar[32];
-    char cuartalineChar[32];
-    char quintalineChar[32];
     ssd1306_clear_screen(&dev, false); // El display a 0, no a valores basura
 
 #if CONFIG_SSD1306_128x64
@@ -2108,31 +2086,18 @@ void app_main(void)
     s_aspirador_state = true;
     blink_motorAspirador();
 
-
-
-    // TO-DO TESTS DE LOS OTROS DOS MOTORES
-
-    // Task mqtt? TO-DO?
-    //  xTaskCreate(mqtt_app_start, "mqtt_send_data_0", 1024 * 2, (void *)0, 10, NULL);
-
-    // Task ADC? TO-DO?
-    // xTaskCreate(adc_app_loop, "adc_receive_data_0", 1024 * 2, (void *)0, 10, NULL);
-
-    /*GPS*/
-
     /* NMEA parser configuration */
-/* DEL GITHUB DE OTRO COMPAÑERO*/
+    /* DEL GITHUB DE OTRO COMPAÑERO, TOMO UN ESQUELETO DE TAREAS PARA GPS */
     init_uart();
 
     //Start test task
-    // GPS
+    /* GPS */
     xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL); // 8192, no 1024 * 2
-    // GSM
+    /* GSM */
     xTaskCreate(tx_task, "uart_tx_task", 8192, NULL, configMAX_PRIORITIES-3, NULL);
-/* FIN DEL GITHUB DE OTRO COMPAÑERO*/
-
-
-// CALIBRACION SENSORES OZONO
+    /* FIN DEL GITHUB DE OTRO COMPAÑERO*/
+    
+    // CALIBRACION SENSORES OZONO
 
     int count = 0;
     int countReadInRowBabor = 0;
@@ -2149,11 +2114,11 @@ void app_main(void)
     int ozonoEstriborC = -1;
     int ozonoTrasFiltroC  = -1;
 
-    while(1){ // TO-DO quitar de la version final
+    /*while(1){ // TO-DO quitar de la version final
         vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    }*/
 
-    /*while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
+    while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
         ESP_LOGI(TAG, "Procedo a leer ADC 0 (CALIBRACION)");
         ozonoBaborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -2196,7 +2161,7 @@ void app_main(void)
         }
 
     count++;
-    }*/
+    }
     ESP_LOGI(TAG, "Calibracion COMPLETADA tras %d segundos", count);
     /* SECCION DE CALIBRACION DE SENSORES DE OZONO ON-THE-FLY */
     double R0babor = getResistencia(ozonoBaborC, RESLBABOR);
@@ -2219,32 +2184,10 @@ void app_main(void)
      */
     while (1)
     {
+        // TO-DO ESTAS DOS LÍNEAS DE ABAJO SON INNECESARIAS EN LA VERSIÓN FINAL, SOLO LAS USAMOS PARA VERIFICAR NIVEL DE ENERGÍA, BORRAR EN VERSION FINAL
+        s_switch_state = false;
+        ssd1306_clear_screen(&dev, false);
 
-        if (gpio_get_level(PIN_SWITCH)) // TO-DO AJUSTAR? BORRAR DE LA VERSION FINAL
-        {
-//            ESP_LOGI(TAG, "Switch display: ON");
-            s_switch_state = true;
-            ssd1306_contrast(&dev, 0xff);
-            sprintf(primeralineChar, " O3 bab: %02d", ozonoBabor);
-            sprintf(segundalineChar, " O3 est: %02d", ozonoEstribor);
-            sprintf(terceralineChar, " O3 tra: %02d", ozonoTrasFiltro);
-            sprintf(cuartalineChar, " V Solar: %02d", voltajeSolar);
-            ssd1306_display_text(&dev, 0, primeralineChar, 32, false);
-            ssd1306_display_text(&dev, 1, segundalineChar, 32, false);
-            ssd1306_display_text(&dev, 2, terceralineChar, 32, false);
-            ssd1306_display_text(&dev, 3, cuartalineChar, 32, false);
-#if CONFIG_SSD1306_128x64
-            ssd1306_display_text(&dev, 4, "                ", 32, false);
-            ssd1306_display_text(&dev, 5, "     GyFhi      ", 32, false);
-            ssd1306_display_text(&dev, 6, "                ", 32, false);
-            ssd1306_display_text(&dev, 7, "     U.P.M.     ", 32, false);
-#endif // CONFIG_SSD1306_128x32
-        }
-        else
-        {
-            s_switch_state = false;
-            ssd1306_clear_screen(&dev, false);
-        }
         if (s_reset_state != 0)
         {
             s_reset_state -= 1;
@@ -2300,7 +2243,6 @@ void app_main(void)
         /* FASE 2.2 LECTURA OZONO I2C */
         ESP_LOGI(TAG, "Procedo a leer I2C de ADCs ozono");
         ESP_LOGI(TAG, "Procedo a leer ADC 0");
-        //int ozonoAux = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA3, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ozonoBaborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA0, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
         ESP_LOGI(TAG, "Procedo a leer ADC 1");
         ozonoEstriborC = ADCADAFRUIT12C_register_read(ADCI2CADAFRUIT_AADR, ADCI2CADAFRUIT_CONFIGADDR, ADCI2CADAFRUIT_CONFIGREGMUXA1, ADCI2CADAFRUIT_CONFIGLSB, ADCI2CADAFRUIT_CONVADDR, 2);
@@ -2319,8 +2261,7 @@ void app_main(void)
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
 
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
-        /*TO-DO añade márgenes de tolerancia y sistema de control
-        NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
+        /*TO-DO añade márgenes de tolerancia y sistema de control NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;

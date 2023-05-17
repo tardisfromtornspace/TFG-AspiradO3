@@ -5,7 +5,7 @@
       "Application": "Pcbnew",
       "Version": "(7.0.0)"
     },
-    "CreationDate": "2023-05-11T10:59:04+02:00"
+    "CreationDate": "2023-05-17T11:18:48+02:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
@@ -47,6 +47,16 @@
       "Path": "CircuiteriaESP32-F_Silkscreen.gbr",
       "FileFunction": "Legend,Top",
       "FilePolarity": "Positive"
+    },
+    {
+      "Path": "CircuiteriaESP32-F_Mask.gbr",
+      "FileFunction": "SolderMask,Top",
+      "FilePolarity": "Negative"
+    },
+    {
+      "Path": "CircuiteriaESP32-B_Mask.gbr",
+      "FileFunction": "SolderMask,Bot",
+      "FilePolarity": "Negative"
     },
     {
       "Path": "CircuiteriaESP32-Edge_Cuts.gbr",
