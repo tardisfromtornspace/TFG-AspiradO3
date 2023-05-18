@@ -1,2 +1,5 @@
-Hello There
-GENERAL KENOBI!
+Proyecto AspiradO3
+
+Nuestro sistema está propuesto para limpiar la troposfera de sustancias químicas nocivas, principalmente el ozono troposférico, pero con unas simples modificaciones también de otros agentes contaminantes como el óxido nitroso, monóxido de carbono y partículas en suspensión, de acuerdo a las ODS 2 (Salud) y 13 (Acción por el clima).
+Para ello, según nuestro plan inicial, utilizaríamos un sistema similar a un dirigible o globo aerostático, en el que los sistemas de control y actuación de nuestro dron estarían suspendidos por un globo de un gas ligero, helio o hidrógeno. Esto es para poder llegar a las áreas donde el ozono troposférico se encuentre, y donde un simple filtro a nivel del suelo no pudiera ayudar. El concepto funcionaría de forma similar a una aspiradora, en la que un motor propulsa el aire a través de una serie de filtros que eliminan el gas contaminante, utilizando un filtro de carbón activo, más un par de filtros anti-pájaro y HVAC (no está de más limpiar un poco la atmósfera de polución, ni evitar que nuestro filtro para ozono reaccione con otras sustancias no deseadas), y posiblemente un filtro catabólico selectivo de NOX basado en urea.
+

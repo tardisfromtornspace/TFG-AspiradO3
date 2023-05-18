@@ -73,19 +73,21 @@
 #include <math.h>
 
 // Para Telegram
+/*
 #include <stdlib.h>
 #include <sys/time.h>
 #include "lwip/apps/sntp.h"
 
 #include "sh2lib.h"
+*/
 
 // Para los sleep
-#include <time.h>
+/*#include <time.h>
 #include "soc/soc_caps.h"
 #include "esp_sleep.h"
 #include "driver/rtc_io.h"
 #include "soc/rtc.h"
-#include "esp32/ulp.h"
+#include "esp32/ulp.h"*/
 #include "driver/uart.h"
 
 // Para display
@@ -101,11 +103,10 @@
 
 static const char *TAG = "ApiradO3";
 
-xSemaphoreHandle Semaphore; // TO-DO SEMAFORO
+xSemaphoreHandle Semaphore;
 int enEllo = 0;
 
 /* Motores AspiradO3 */
-// WIP Arreglar conflicto con el LED
 // Motor Aspirador
 #define PIN_ASPIRADOR 21
 
@@ -124,14 +125,6 @@ int enEllo = 0;
 
 
 /* Sensores ozono */
-// WIP
-// Uso SPI?
-/*
-#define PIN_NUM_MISO 25
-#define PIN_NUM_MOSI 23
-#define PIN_NUM_CLK  19
-#define PIN_NUM_CS   22
-*/
 /* COSAS MATEMÁTICAS Y DE COMPONENTE MISCELÁNEO*/
 #define E 2.718281828459
 #define RESLDATASHEET 1000000 // La resistencia del datasheet del sensor MQ131 utilizado en el módulo MikroE de detección de ozono
@@ -143,7 +136,6 @@ int enEllo = 0;
 
 #define MQ131_DEFAULT_STABLE_CYCLE 15 //Número de ciclos estables
 
-// TO-DO ajustar al sensor de ozono
 #define VOLTREF 4.500 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
 #define VOLTREFDATASHEET 5.000
 
@@ -175,15 +167,15 @@ int enEllo = 0;
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 #include "minmea.h"
 #define UART UART_NUM_2
-#define TXD_PIN 17 // Necesario para cuando tengamos el SIM800
-#define RXD_PIN 3 // 16
+#define TXD_PIN 17 // Necesario para el SIM800
+#define RXD_PIN 3 // 16 Necesario para el módulo GPS
 static const int RX_BUF_SIZE = 4096;
 
-/* LED */
-#define PIN_SWITCH 2 // 35 // TO-DO TAMPOCO USES EL PIN 2 A MENOS QUE QUIERAS QUE SI EL SWITCH ESTÉ A ON NO SE PUEDA COMUNICAR CON LA FLASH PARA SUBIR PROGRAMAS POR CABLE Si aplicamos lo de la optimización, se puede hacer para despertar al procesador cuando se activa el switch del display (recomendable cambiar el switch a otro pin, sin embargo).
-#define BLINK_GPIO CONFIG_BLINK_GPIO // 18 originariamente TO-DO borrar si no es necesario
-#define GPIO_WAKEUP_NUM PIN_SWITCH
-#define GPIO_WAKEUP_LEVEL 0
+/* LED TO-DO Borrar si no es necesario */ 
+//#define PIN_SWITCH 2 // 35
+//#define BLINK_GPIO CONFIG_BLINK_GPIO // 18 originariamente TO-DO borrar si no es necesario
+//#define GPIO_WAKEUP_NUM PIN_SWITCH
+//#define GPIO_WAKEUP_LEVEL 0
 // Fin del LED
 
 // I2C nota: hemos elegido el 4 y el 0, puede que de incompatibilidades con otros módulos fuera de ESP32
@@ -206,15 +198,12 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 #define CO2_SENSOR_ADDR 0x5A /*!< Slave address of the CO2 sensor is 0x5A, when we add an additional binary 1 behind it transforms into 0xB5 */
 #define CO2_REG_ADDR 0x5A    /*!< Register addresses of the CO2 lecture register */
 
-#define O3_SENSOR_ADDR 0x33 /* TO-DO Si el sensor de O3 se usa por ADC esto no se necesita BORRAR EN LA VERSIÓN FINAL*/
-#define O3_SENSOR_REGISTER 0x97
-
 #define TEMPHUM_SENSOR_ADDR 0x44 /*Dir sensor tempHum*/
 #define COMANDO_TEMPHUM_MSB 0x24
 #define COMANDO_TEMPHUM_LSB 0x16 /*Los comandos de este sensor son de 16 bits, indican el MSB el modo y el LSB la frecuencia, así 0x24 0x16 es modo SIngle Shot con baja repetibilidad*/
 
 #define ADC12C_AADR 0x68 /*Direccion del ADC I2C externo, 4 bits de dir (1101) + 3 de canal + bit r/w, 1101 = 0D  
-The I 2C address bits (A2, A1, A0 bits) for the MCP3423 and MCP3424 are user configurable and
+The I2C address bits (A2, A1, A0 bits) for the MCP3423 and MCP3424 are user configurable and
 determined by the logic status of the two external address selection pins on the user’s application board
 (Adr0 and Adr1 pins)
 Así, si lo pongo Adr0 = Adr1 = LOW => la dirección es 0x68 (que se volvería 0xD0 o 0xD1 al añadir el bit de lectura/escritura)
@@ -290,10 +279,10 @@ extern const uint8_t server_rootTelegram_cert_pem_start[] asm("_binary_http2_tel
 extern const uint8_t server_rootTelegram_cert_pem_end[] asm("_binary_http2_telegram_root_cert_pem_end");
 
 /* The HTTP/2 server to connect to */
-#define HTTP2_SERVER_URI "https://api.telegram.org"
+//#define HTTP2_SERVER_URI "https://api.telegram.org"
 /* A GET request that keeps streaming current time every second */
-#define TELEGRAMTOKEN "CAMBIALO POR EL TUYO" // TO-DO NO LO SUBAS CON ESTO A LA ENTREGA!!!!
-#define CHATTOKEN "-891728903"               //"CAMBIA POR EL TUYO" // TO-DO NO LO SUBAS CON ESTO A LA ENTREGA!!!!
+//#define TELEGRAMTOKEN "CAMBIALO POR EL TUYO" // TO-DO NO LO SUBAS CON ESTO A LA ENTREGA!!!!
+//#define CHATTOKEN "CAMBIA POR EL TUYO"       // TO-DO NO LO SUBAS CON ESTO A LA ENTREGA!!!!
 #define UNIVERSITY "SBC22_M01"               //"UPM"
 #define TOKENMQTT "YSRNEFDXnyIGhX9OaylG"
 #define MQTTURI "mqtt://demo.thingsboard.io"
@@ -303,18 +292,15 @@ int extraOffset = 0;
 int conexionEnProceso = 1;
 int conproc = -1;
 
-// DESCOMENTA static const char GETBOT[] = "/bot" TELEGRAMTOKEN "/";
+// DESCOMENTA ESTAS TRES LÍNEAS DE ABAJO CUANDO NECESITES PROBAR LA MEJORA DE SEGURIDAD 
+// 
 // static const char GETUPDATES[] = "/bot" TELEGRAMTOKEN "/getUpdates?limit=5";
-static const char POSTUPDATES[] = "/bot" TELEGRAMTOKEN "/sendMessage?chat_id=" CHATTOKEN;
+// static const char POSTUPDATES[] = "/bot" TELEGRAMTOKEN "/sendMessage?chat_id=" CHATTOKEN;
 
 // Sleeps
-int http2Caido = 0;
+//int http2Caido = 0;
 
 // LEDes, motores y algunos datos
-
-static uint8_t s_led_state = 0; // Estado del led
-
-static uint8_t s_switch_state = 0; // Estado del switch TO-DO borrar en final
 
 static uint8_t s_aspirador_state = 0; // Estado del aspirador 0 - apagado, 1 - encendido
 int estadoTimonInterno = 45; // Estado del timon interno, -45 posición levantada, 0 inicial o desconocido, 45 posición bajada
@@ -365,22 +351,22 @@ uint8_t data[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // Para sensor I2C - tomamos los 
 
 // LEDes
 
-#ifdef CONFIG_BLINK_LED_RMT
+/*#ifdef CONFIG_BLINK_LED_RMT
 static led_strip_t *pStrip_a;
 
 static void blink_led(void)
 {
-    /* If the addressable LED is enabled */
+    // If the addressable LED is enabled
     if (s_led_state)
     {
-        /* Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color */
+        // Set the LED pixel using RGB from 0 (0%) to 255 (100%) for each color
         pStrip_a->set_pixel(pStrip_a, 0, 16, 16, 16);
-        /* Refresh the strip to send data */
+        // Refresh the strip to send data
         pStrip_a->refresh(pStrip_a, 100);
     }
     else
     {
-        /* Set all LED off to clear all pixels */
+        // Set all LED off to clear all pixels
         pStrip_a->clear(pStrip_a, 50);
     }
 }
@@ -390,9 +376,9 @@ static void blink_led(void)
 static void configure_led(void)
 {
     ESP_LOGI(TAG, "Example configured to blink addressable LED!");
-    /* LED strip initialization with the GPIO and pixels number*/
+    // LED strip initialization with the GPIO and pixels number
     pStrip_a = led_strip_init(CONFIG_BLINK_LED_RMT_CHANNEL, BLINK_GPIO, 1);
-    /* Set all LED off to clear all pixels */
+    // Set all LED off to clear all pixels
     pStrip_a->clear(pStrip_a, 50);
 }
 
@@ -400,7 +386,7 @@ static void configure_led(void)
 
 static void blink_led(void)
 {
-    /* Set the GPIO level according to the state (LOW or HIGH)*/
+    // Set the GPIO level according to the state (LOW or HIGH)
     gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
@@ -408,62 +394,12 @@ static void configure_led(void)
 {
     ESP_LOGI(TAG, "Example configured to blink GPIO LED!");
     gpio_reset_pin(BLINK_GPIO);
-    /* Set the GPIO as a push/pull output */
+    // Set the GPIO as a push/pull output
     gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
 }
 
 #endif
-
-/*Función GPS, USAMOS GPIO 5 por defecto */
-/**
- * @brief GPS Event Handler
- *
- * @param event_handler_arg handler specific arguments
- * @param event_base event base, here is fixed to ESP_NMEA_EVENT
- * @param event_id event id
- * @param event_data event specific arguments
- */
-static void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
-{
-    gps_t *gps = NULL;
-    ESP_LOGI(TAG, "GPS EVENT HANDLER SE ACTIVO");
-    switch (event_id) {
-    case GPS_UPDATE:
-        gps = (gps_t *)event_data;
-        /* print information parsed from GPS statements */
-        ESP_LOGI(TAG, "%d/%d/%d %d:%d:%d => \r\n"
-                 "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-                 "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
-                 "\t\t\t\t\t\taltitude   = %.02fm\r\n"
-                 "\t\t\t\t\t\tspeed      = %fm/s",
-                 gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
-                 gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second,
-                 gps->latitude, gps->longitude, gps->altitude, gps->speed);
-        gpsdateyear = gps->date.year + YEAR_BASE;
-        gpsdatemonth = gps->date.month;
-        gpsdateday = gps->date.day;
-        gpstimhour = gps->tim.hour + TIME_ZONE;
-        gpstimminute = gps->tim.minute;
-        gpstimsecond = gps->tim.second;
-        /*Cargamos la info anterior, por comparar*/
-        gpslatitudeAnt = gpslatitude;
-        gpslongitudeAnt = gpslongitude;
-        gpsaltitudeAnt = gpsaltitude;
-        gpsspeedAnt = gpsspeed;
-        
-        gpslatitude = gps->latitude;
-        gpslongitude = gps->longitude;
-        gpsaltitude = gps->altitude;
-        gpsspeed = gps->speed;
-        break;
-    case GPS_UNKNOWN:
-        /* print unknown statements */
-        ESP_LOGW(TAG, "UART Unknown statement:%s", (char *)event_data);
-        break;
-    default:
-        break;
-    }
-}
+*/
 
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 void init_uart(void)
@@ -642,22 +578,6 @@ int sendData(const char* logName, const char* data)
     return txBytes;
 }
 
-void send_SMS(const char* logName, const char* telefono, const char* data){
-    sendData(logName, "AT+CMGF=1\r\n"); // Configuring TEXT mode
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-    sendData(logName, "AT+CMGS=\"+034634723664\"\r\n"); // change ZZ with country code and xxxxxxxxxxx with phone number to sms TO-DO usa tu teléfono
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-    sendData(logName, data);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    sendData(logName, data);
-    // Enviar Ctrl+Z en una nueva línea vacía
-    const char *mess = "\r\n\032";
-    ESP_LOGI(logName, "Escribiendo el ctrl+z");
-    sendData(logName, mess);
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-
-}
-
 static void tx_task(void *arg)
 {
     static const char *TX_TASK_TAG = "TX_TASK_GSM";
@@ -725,7 +645,7 @@ static void tx_task(void *arg)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
 
         ESP_LOGI(TAG, "ESPERO A LLAMADA DEL SEMAFORO");
-        xSemaphoreTake(Semaphore, portMAX_DELAY); // TO-DO Semaforo
+        xSemaphoreTake(Semaphore, portMAX_DELAY);
 
         /* Etapa de conexión IP */
         sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
@@ -823,9 +743,6 @@ static void tx_task(void *arg)
 
         sendData(TX_TASK_TAG, "AT+HTTPTERM\r\n"); // Terminar servicio HTTP
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-        
-        //send_SMS(TX_TASK_TAG, "+034634723664", "Hola Mundo\r\n");
-        //vTaskDelay(10000 / portTICK_PERIOD_MS);
 
         enEllo = 0;
         
@@ -1147,7 +1064,7 @@ esp_mqtt_client_handle_t client;
 
 static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 {
-    // TO-DO ver si puedo hacer que en caso de error reinicie el MQTT con el client
+    // TO-DO ver si puedo hacer que en caso de error reinicie el MQTT con el client, mejora de seguridad
     switch (event->event_id)
     {
     case MQTT_EVENT_CONNECTED:
@@ -1248,7 +1165,7 @@ static bool adc_calibration_init(void)
 /*
  * TELEGRAM
  */
-int handle_echo_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
+/*int handle_echo_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
 {
     if (len)
     {
@@ -1265,8 +1182,8 @@ int handle_echo_response(struct sh2lib_handle *handle, const char *data, size_t 
     }
     //    vTaskDelete(NULL);
     return 0;
-}
-
+}*/
+/*
 char *cutoff(const char *str, int from, int to)
 {
     if (from >= to)
@@ -1282,9 +1199,9 @@ char *cutoff(const char *str, int from, int to)
     (void)toit;
     memcpy(cut, fromit, to);
     return begin;
-}
-/* TO-DO Esto debería centralizarse en algún otro dispositivo, nuestra aspiradora estará aspirando y no hay que saturar el GSM o fundirnos los datos móviles */
-int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
+}*/
+/* TO-DO Investigar formas de aplicar esto para mejoras de seguridad, o como un segundo dispositivo */
+/*int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
 {
     if (len)
     {
@@ -1309,8 +1226,6 @@ int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t l
                     cJSON *parameter;
                     cJSON_ArrayForEach(parameter, parameters)
                     {
-
-                        /* Each element is an object with unknown field(s) */
                         cJSON *elem;
                         int puedo = 0;
                         cJSON_ArrayForEach(elem, parameter)
@@ -1373,30 +1288,28 @@ int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t l
                                                 // char cmd2Rep[] = <Mi Id>; que ya hicimos antes (postman_data)
 
                                                 char cmd3[] = "/restartPlaca";
-                                                // RESPUESTA: Hola Mundo
+                                                // RESPUESTA: Resetear la placa
                                                 char cmd3Rep[] = "Enseguida la reseteo";
 
                                                 char cmd4[] = "/datos";
                                                 // RESPUESTA: Devuelve la info del sistema que recoge
                                                 char cmd4Rep[] = "El sistema detecta: ";
 
-                                                char cmdP1[] = "/Q-Que son los sumideros de carbono";
-                                                char cmdP1Rep[] = "Los sumideros de carbono son depositos naturales que absorben el carbono de la atmósfera y lo fijan.";
+                                                char cmdP1[] = "/Q-Que es el ozono";
+                                                char cmdP1Rep[] = "El ozono (O3) es un componente vital para proteger la superficie terrestre de los cancerigenos rayos ultravioleta (UV). Esto se debe a su estructura molecular muy oxidativa y que en cuanto es impactada por fotones UV provoca que la molecula se rompa, absorbiendo parte de la radiacion, y luego se reforma";
 
-                                                char cmdP2[] = "/Q-Por que en la fotosintesis una planta toma CO2 y libera unicamente O2";
-                                                // b. ¿Por qué en la fotosíntesis una planta toma CO2 y libera únicamente O2?, ¿qué pasa con el Carbono en ese proceso?
-                                                char cmdP2Rep[] = "Los procesos fotosinteticos de las plantas emplean el CO2 y la luz para producir glucosa, el producto de desecho es el O2, mientras que el carbono se fija.";
+                                                char cmdP2[] = "/Q-Por que es el ozono nocivo";
+                                                char cmdP2Rep[] = "Esa misma naturaleza oxidativa causa que reaccione con diferentes compuestos, entre ellos los tejidos vivos, causando irritación, problemas respiratorios, cardiovasculares, nerviosos, inmulogicos y reproductivos.";
 
-                                                char cmdP3[] = "/Q-Que componentes son imprescindibles para que una planta crezca";
-                                                // c. ¿Qué componentes son imprescindibles para que una planta crezca?
-                                                char cmdP3Rep[] = "las plantas son aerobeas asi que requieren tambien de oxigeno para sobrevivir, ya que tambien respiran, aunque por el dia no se note. Ademas necesitan de agua y sales minerales para realizar sus procesos metabolicos.";
+                                                char cmdP3[] = "/Q-Que componentes producen el ozono malo";
+                                                char cmdP3Rep[] = "La causa por la que se produce el ozono troposferico es una combinación de los compuestos que destruyen la capa de ozono y dejan pasar los UV mas abajo, y compuestos catabolizadores como los NOx y compuestos organicos volatiles de la combustion que reaccionan con el UV y oxigeno para producir ozono.";
 
                                                 char str[2048];
 
                                                 if (strcmp(auxMensaje, cmd1) == 0)
                                                 {
                                                     sprintf(str, "%s&text=%s : %s: %s", POSTUPDATES, auxMensaje, UNIVERSITY, cmd1Rep);
-                                                    // sh2lib_do_post( aparentemente para casos simples se hace con un get, que curioso
+                                                    // sh2lib_do_post(...) aparentemente para casos simples se hace con un get, que curioso
                                                     sh2lib_do_get(handle, str, handle_echo_response);
                                                 }
                                                 else if (strcmp(auxMensaje, cmd2) == 0)
@@ -1483,8 +1396,8 @@ int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t l
     }
     return 0;
 }
-
-int send_put_data(struct sh2lib_handle *handle, char *buf, size_t length, uint32_t *data_flags)
+*/
+/*int send_put_data(struct sh2lib_handle *handle, char *buf, size_t length, uint32_t *data_flags)
 {
 #define DATA_TO_SEND "Hello World"
     int copylen = strlen(DATA_TO_SEND);
@@ -1500,8 +1413,8 @@ int send_put_data(struct sh2lib_handle *handle, char *buf, size_t length, uint32
 
     (*data_flags) |= NGHTTP2_DATA_FLAG_EOF;
     return copylen;
-}
-
+}*/
+/*
 static void set_time(void) // Tiempo es necesario para HTTP2
 {
     struct timeval tv = {
@@ -1511,20 +1424,20 @@ static void set_time(void) // Tiempo es necesario para HTTP2
         0, 0};
     settimeofday(&tv, &tz);
 
-    /* Start SNTP service */
+    // Start SNTP service
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_init();
 }
-
+*/
 /* Estas funciones serán útiles para mejorar la seguridad, pero hasta entonces, no se usan*/
-static void http2_task(void *args)
+/*static void http2_task(void *args)
 {
-    /* Set current time: proper system time is required for TLS based
+    / * Set current time: proper system time is required for TLS based
      * certificate verification.
-     */
+     * /
     set_time();
 
-    /* HTTP2: one connection multiple requests. Do the TLS/TCP connection first */
+    / * HTTP2: one connection multiple requests. Do the TLS/TCP connection first * /
     printf("Connecting to server\n");
     struct sh2lib_config_t cfg = {
         .uri = HTTP2_SERVER_URI,
@@ -1552,10 +1465,10 @@ static void http2_task(void *args)
         printf("My offset es %d", offset);
         sprintf(str, "/bot%s/getUpdates?offset=%d", TELEGRAMTOKEN, offset);
         sh2lib_do_get(&hd, str, handle_get_response);
-        /* HTTP GET  */
+        / * HTTP GET  * /
         while (conexionEnProceso > 0) // Ahora se pide ejecutar todo lo que se ponga arriba hasta que desconecte
         {
-            /* Process HTTP2 send/receive */
+            / * Process HTTP2 send/receive * /
             if (sh2lib_execute(&hd) < 0)
             {
                 printf("Error in send/receive\n");
@@ -1570,9 +1483,9 @@ static void http2_task(void *args)
     }
     vTaskDelete(NULL);
 }
+*/
 
 /* An HTTP GET handler */
-/* TO-DO AJUSTAR EN LA VERSIÓN FINAL, NO ES NECESARIO EXCEPTO PARA RESETEAR A LA PARTICIÓN DE LA OTA*/
 static esp_err_t root_get_handler(httpd_req_t *req)
 {
     char mensajito[494];
@@ -1587,19 +1500,18 @@ static esp_err_t root_get_handler(httpd_req_t *req)
     {
         sprintf(mensajito, "<h1>La ESP32 se va a resetear en %d</h1>", s_reset_state);
         mess = strcat(mensajito, finDePagina);
-        // httpd_resp_send(req, resetmess, HTTPD_RESP_USE_STRLEN);
     }
     else
     {
         sprintf(mensajito, "<h1> Acceso Web http a AspiradO3 </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p> <h1> V sol (mV): %d</h1> <h1> Ozono Estribor (ppm): %d</h1><h1> Ozono Babor (ppm): %d</h1><h1> Ozono tras filtros (ppm): %d</h1>", voltajeSolar, ozonoEstribor, ozonoBabor, ozonoTrasFiltro);
-
         mess = strcat(mensajito, finDePagina);
+        // TO-DO mete el mess = strcat(mensajito, finDePagina); tras el if-else en vez de dentro del if y del else
     }
     httpd_resp_send(req, mess, HTTPD_RESP_USE_STRLEN);
 
     return ESP_OK;
 }
-
+/*
 static esp_err_t buttON_get_handler(httpd_req_t *req)
 {
     ESP_LOGI(TAG, "Activo el LED");
@@ -1625,6 +1537,7 @@ static esp_err_t buttOFF_get_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
+*/
 static esp_err_t buttReset_get_handler(httpd_req_t *req)
 {
     s_reset_state = 5;
@@ -1693,15 +1606,6 @@ static const httpd_uri_t reset = {
     .method = HTTP_GET,
     .handler = buttReset_get_handler};
 
-static const httpd_uri_t off = {
-    .uri = "/off",
-    .method = HTTP_GET,
-    .handler = buttOFF_get_handler};
-static const httpd_uri_t on = {
-    .uri = "/on",
-    .method = HTTP_GET,
-    .handler = buttON_get_handler};
-
 static httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
@@ -1735,8 +1639,6 @@ static httpd_handle_t start_webserver(void)
     ESP_LOGI(TAG, "Registering URI handlers");
     httpd_register_uri_handler(server, &root); // Es importante poner los uri handlers acá para iniciarlos
     httpd_register_uri_handler(server, &reset);
-    httpd_register_uri_handler(server, &off);
-    httpd_register_uri_handler(server, &on);
     return server;
 }
 
@@ -1766,7 +1668,7 @@ static void disconnect_handler(void *arg, esp_event_base_t event_base,
 static void connect_handler(void *arg, esp_event_base_t event_base,
                             int32_t event_id, void *event_data)
 {
-    ESP_LOGI(TAG, "ME HE CONECTADO"); // TO-DO verificar
+    ESP_LOGI(TAG, "ME HE CONECTADO");
     httpd_handle_t *server = (httpd_handle_t *)arg;
     if (*server == NULL)
     {
@@ -1842,135 +1744,13 @@ static void configure_analog(void)
     /* Set the GPIO 32 as a push/pull output */
     gpio_set_direction(PIN_ANALOG4, GPIO_MODE_INPUT);
 }
-
-/* TO-DO ESTO SE BORRA, NO TENEMOS NI DISPLAY (QUIÉN LO VA A VER A 100 M DE ALTURA, SOLO NOS VALE PARA ARRANCAR, SI ACASO ENTONCES LO AJUSTAS PARA UN MANUAL DE USUARIO)
-Y EL SLEEP EN EL AIRE ES SUICIDIO */
-void sleepDelDisplay(void)
-{
-#ifdef CONFIG_EXAMPLE_EXT1_WAKEUP
-    const int ext_wakeup_pin_1 = 2;
-    const uint64_t ext_wakeup_pin_1_mask = 1ULL << ext_wakeup_pin_1;
-
-    printf("Enabling EXT1 wakeup on pin GPIO%d\n", ext_wakeup_pin_1);
-    esp_sleep_enable_ext1_wakeup(ext_wakeup_pin_1_mask, ESP_EXT1_WAKEUP_ANY_HIGH);
-
-    /* If there are no external pull-up/downs, tie wakeup pins to inactive level with internal pull-up/downs via RTC IO
-     * during deepsleep. However, RTC IO relies on the RTC_PERIPH power domain. Keeping this power domain on will
-     * increase some power comsumption. */
-#if CONFIG_EXAMPLE_EXT1_USE_INTERNAL_PULLUPS
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    rtc_gpio_pullup_dis(ext_wakeup_pin_1);
-    rtc_gpio_pulldown_en(ext_wakeup_pin_1);
-#endif // CONFIG_EXAMPLE_EXT1_USE_INTERNAL_PULLUPS
-#endif // CONFIG_EXAMPLE_EXT1_WAKEUP
-}
-void deQueMeLevante(int sleep_time_ms)
-{
-    switch (esp_sleep_get_wakeup_cause())
-    {
-#if CONFIG_EXAMPLE_EXT0_WAKEUP
-    case ESP_SLEEP_WAKEUP_EXT0:
-    {
-        printf("Wake up from ext0\n");
-        break;
-    }
-#endif // CONFIG_EXAMPLE_EXT0_WAKEUP
-#ifdef CONFIG_EXAMPLE_EXT1_WAKEUP
-    case ESP_SLEEP_WAKEUP_EXT1:
-    {
-        uint64_t wakeup_pin_mask = esp_sleep_get_ext1_wakeup_status();
-        if (wakeup_pin_mask != 0)
-        {
-            int pin = __builtin_ffsll(wakeup_pin_mask) - 1;
-            printf("Wake up from GPIO %d\n", pin);
-        }
-        else
-        {
-            printf("Wake up from GPIO\n");
-        }
-        break;
-    }
-#endif // CONFIG_EXAMPLE_EXT1_WAKEUP
-#if SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
-    case ESP_SLEEP_WAKEUP_GPIO:
-    {
-        uint64_t wakeup_pin_mask = esp_sleep_get_gpio_wakeup_status();
-        if (wakeup_pin_mask != 0)
-        {
-            int pin = __builtin_ffsll(wakeup_pin_mask) - 1;
-            printf("Wake up from GPIO %d\n", pin);
-        }
-        else
-        {
-            printf("Wake up from GPIO\n");
-        }
-        break;
-    }
-#endif // SOC_GPIO_SUPPORT_DEEPSLEEP_WAKEUP
-    case ESP_SLEEP_WAKEUP_TIMER:
-    {
-        printf("Wake up from timer. Time spent in deep sleep: %dms\n", sleep_time_ms);
-        break;
-    }
-#ifdef CONFIG_EXAMPLE_TOUCH_WAKEUP
-    case ESP_SLEEP_WAKEUP_TOUCHPAD:
-    {
-        printf("Wake up from touch on pad %d\n", esp_sleep_get_touchpad_wakeup_status());
-        break;
-    }
-#endif // CONFIG_EXAMPLE_TOUCH_WAKEUP
-#ifdef CONFIG_EXAMPLE_ULP_TEMPERATURE_WAKEUP
-#if CONFIG_IDF_TARGET_ESP32
-    case ESP_SLEEP_WAKEUP_ULP:
-    {
-        printf("Wake up from ULP\n");
-        int16_t diff_high = (int16_t)ulp_data_read(3);
-        int16_t diff_low = (int16_t)ulp_data_read(4);
-        if (diff_high < 0)
-        {
-            printf("High temperature alarm was triggered\n");
-        }
-        else if (diff_low < 0)
-        {
-            printf("Low temperature alarm was triggered\n");
-        }
-        else
-        {
-            assert(false && "temperature has stayed within limits, but got ULP wakeup\n");
-        }
-        break;
-    }
-#endif // CONFIG_IDF_TARGET_ESP32
-#endif // CONFIG_EXAMPLE_ULP_TEMPERATURE_WAKEUP
-    case ESP_SLEEP_WAKEUP_UNDEFINED:
-    default:
-        printf("Not a deep sleep reset\n");
-    }
-
-#ifdef CONFIG_EXAMPLE_ULP_TEMPERATURE_WAKEUP
-#if CONFIG_IDF_TARGET_ESP32
-    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_UNDEFINED)
-    {
-        printf("ULP did %d temperature measurements in %d ms\n", ulp_data_read(1), sleep_time_ms);
-        printf("Initial T=%d, latest T=%d\n", ulp_data_read(0), ulp_data_read(2));
-    }
-#endif // CONFIG_IDF_TARGET_ESP32
-#endif // CONFIG_EXAMPLE_ULP_TEMPERATURE_WAKEUP
-}
-
 // PROGRAMA PRINCIPAL
 void app_main(void)
 {
     /*
-     * Información del sleep
-     */
-    //struct timeval now;
-    //gettimeofday(&now, NULL);
-    //int sleep_time_ms = (now.tv_sec - sleep_enter_time.tv_sec) * 1000 + (now.tv_usec - sleep_enter_time.tv_usec) / 1000;
-    /*
      * Configurar periféricos, LED, motores y los inputs analógicos
      */
-    configure_led();
+    //configure_led();
     configure_motor_continuo(PIN_ASPIRADOR);
     mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, SERVO_PULSE_TIMONINTERNO); // To drive a RC servo, one MCPWM generator is enough
     mcpwm_gpio_init(MCPWM_UNIT_1, MCPWM0A, SERVO_PULSE_TIMONEXTERNO); // For the second RC servo
@@ -1988,7 +1768,7 @@ void app_main(void)
     configure_analog();
 
     // iniciar I2C
-    // Iniciar el display TO-DO ver como borrar el display
+    // Iniciar el display TO-DO ver como borrar el display, pero no borres su init
     SSD1306_t dev;
     ESP_ERROR_CHECK(i2c_master_init(&dev, I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, 0));
     ESP_LOGI(TAG, "I2C initialized successfully");
@@ -2079,10 +1859,10 @@ void app_main(void)
     client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(client);
 
-    // Task HTTP2 para Telegram TO-DO descomentar???
+    // Task HTTP2 TO-DO aplicar mejoras de seguridad en un futuro con esto
     // xTaskCreate(&http2_task, "http2_task", (1024 * 32), NULL, 5, NULL);
 
-    // TEST MOTOR ASPIRADOR TO-DO TO VERIFY
+    // TEST MOTOR ASPIRADOR
     s_aspirador_state = true;
     blink_motorAspirador();
 
@@ -2184,8 +1964,7 @@ void app_main(void)
      */
     while (1)
     {
-        // TO-DO ESTAS DOS LÍNEAS DE ABAJO SON INNECESARIAS EN LA VERSIÓN FINAL, SOLO LAS USAMOS PARA VERIFICAR NIVEL DE ENERGÍA, BORRAR EN VERSION FINAL
-        s_switch_state = false;
+        // TO-DO ESTAS LÍNEA DE ABAJO ES INNECESARIA EN LA VERSIÓN FINAL, SOLO LA USAMOS PARA VERIFICAR NIVEL DE ENERGÍA, BORRAR EN VERSION FINAL
         ssd1306_clear_screen(&dev, false);
 
         if (s_reset_state != 0)
@@ -2261,7 +2040,7 @@ void app_main(void)
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
 
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
-        /*TO-DO añade márgenes de tolerancia y sistema de control NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
+        /*TO-DO añade márgenes de tolerancia y sistema de control según pruebas del prototipo final NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
@@ -2295,7 +2074,7 @@ void app_main(void)
             // Indico al GSM que debe enviarlo
             ESP_LOGI(TAG, "MANDO POR GSM");
         } else {
-            ESP_LOGI(TAG, "ENVIO WI-FI EXITOSO");
+            ESP_LOGI(TAG, "ENVIO WI-FI");
         }
     }
 }

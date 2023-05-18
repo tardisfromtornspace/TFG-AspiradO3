@@ -1,0 +1,1963 @@
+{
+  "ruleChain": {
+    "additionalInfo": {
+      "description": "Rulechain for TeaSpike device from TEASPILS project."
+    },
+    "name": "Rulechain TeaSpike",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "externalId": null
+  },
+  "metadata": {
+    "firstNodeIndex": 37,
+    "nodes": [
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1277,
+          "layoutY": 1525
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1491,
+          "layoutY": 1599
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1158,
+          "layoutY": 1726
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1489,
+          "layoutY": 1753
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1227,
+          "layoutY": 886
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1461,
+          "layoutY": 962
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 233,
+          "layoutY": 1049
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "ToxicidadDespues Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.luzI2C > 400;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 221,
+          "layoutY": 1542
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "PocaEnergiaGenerada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.energiaHidraulica + msg.energiaSolar < 3300;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 769,
+          "layoutY": 1601
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Poca energia generada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "Poca energia generada",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 276,
+          "layoutY": 1622
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Poca energia generada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "Poca energia generada"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 236,
+          "layoutY": 879
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "ToxinaAntes Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.co2I2C > 1200;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 504,
+          "layoutY": 879
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "ToxinaAntes Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.co2I2C > 2000;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 762,
+          "layoutY": 884
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "ToxinaAntes Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "ToxinaAntes",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 766,
+          "layoutY": 963
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "ToxinaAntes Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "ToxinaAntes",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 234,
+          "layoutY": 965
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear ToxinaAntes Alarms",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "ToxinaAntes"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1212,
+          "layoutY": 1052
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1456,
+          "layoutY": 1143
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 487,
+          "layoutY": 1050
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "ToxicidadDespues Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.luzI2C > 1000;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 761,
+          "layoutY": 1047
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "ToxicidadDespues Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "ToxicidadDespues",
+          "severity": "CRITICAL",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 763,
+          "layoutY": 1115
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "ToxicidadDespues Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "ToxicidadDespues",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 236,
+          "layoutY": 1132
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear ToxicidadDespues Alarms",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "ToxicidadDespues"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 226,
+          "layoutY": 1219
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "FiltroRoto Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.luzI2C != 0 && (0.01 * msg.co2I2C) < msg.luzI2C;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1217,
+          "layoutY": 1218
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1459,
+          "layoutY": 1263
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 760,
+          "layoutY": 1219
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "FiltroRoto Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "FiltroRoto",
+          "severity": "CRITICAL",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 221,
+          "layoutY": 1302
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear ToxicidadDespues Alarms",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "ToxicidadDespues"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 228,
+          "layoutY": 1377
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "botonDisplay Note",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.botonDisplay == true;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1219,
+          "layoutY": 1376
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1461,
+          "layoutY": 1421
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 762,
+          "layoutY": 1377
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "botonDisplay Note",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "botonDisplay",
+          "severity": "INDETERMINATE",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 223,
+          "layoutY": 1460
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear botonDisplay Notes",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "botonDisplay"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 542,
+          "layoutY": 1531
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "PocaEnergiaGenerada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return (msg.energiaHidraulica + msg.energiaSolar) < 1500;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 766,
+          "layoutY": 1537
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Muy Poca energia generada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "Poca energia generada",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 490,
+          "layoutY": 1698
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "MuchaEnergiaGenerada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.energiaHidraulica + msg.energiaSolar > 6000;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 752,
+          "layoutY": 1674
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Mucha energia generada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "Mucha energia generada",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 747,
+          "layoutY": 1776
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Poca energia generada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "Poca energia generada"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 462,
+          "layoutY": 1597
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Mucha energia generada",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "Mucha energia generada"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 326,
+          "layoutY": 151
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "OzonoAntes Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.ozonoBabor > 50 || msg.ozonoEstribor > 50;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 577,
+          "layoutY": 151
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "OzonoAntes Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.ozonoBabor > 100 || msg.ozonoEstribor > 100;",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 325,
+          "layoutY": 424
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "TO-DO FiltroRoto Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return (0.6 * msg.ozonoBabor < msg.ozonoTrasFiltro) || (0.6 * msg.ozonoEstribor < msg.ozonoTrasFiltro)",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1295,
+          "layoutY": 150
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "TO-DO New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1293,
+          "layoutY": 264
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "TO-DO REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 847,
+          "layoutY": 150
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "OzonoAntes Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "OzonoAntes",
+          "severity": "WARNING",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 846,
+          "layoutY": 216
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "OzonoAntes Warning",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "OzonoAntes",
+          "severity": "MAJOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 846,
+          "layoutY": 267
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear OzonoAntes Alarms",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "OzonoAntes"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 843,
+          "layoutY": 427
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "FiltroRoto Danger",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "FiltroRoto",
+          "severity": "CRITICAL",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 843,
+          "layoutY": 483
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear FiltroRoto Alarms",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "FiltroRoto"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1301,
+          "layoutY": 428
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "TO-DO New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1299,
+          "layoutY": 542
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "TO-DO REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 313,
+          "layoutY": 627
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "NivelNublado Info",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.energiaSolar < 1500 ",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 831,
+          "layoutY": 630
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "NivelNublado Info",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": null,
+          "alarmType": "NivelNublado Info",
+          "severity": "MINOR",
+          "propagate": false,
+          "relationTypes": [],
+          "propagateToOwner": null,
+          "propagateToTenant": null,
+          "dynamicSeverity": false
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 831,
+          "layoutY": 686
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear NivelNublado Info",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "alarmDetailsBuildJs": "var details = {};\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    //remove prevAlarmDetails from metadata\n    delete metadata.prevAlarmDetails;\n    //now metadata is the same as it comes IN this rule node\n}\n\n\nreturn details;",
+          "alarmDetailsBuildTbel": null,
+          "alarmType": "NivelNublado Info"
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1289,
+          "layoutY": 631
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "TO-DO New Telegram MSG",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": " var newMsg ={};\r\n newMsg.text = '\"' +  msg.name + '\"' + \" has been triggered in device : \" + '\"' + metadata.deviceName + '\"';\r\n newMsg.chat_id = 5983287334; \r\n return {msg: newMsg, metadata: metadata, msgType: msgType};",
+          "tbelScript": null
+        },
+        "externalId": null
+      },
+      {
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 1287,
+          "layoutY": 745
+        },
+        "type": "org.thingsboard.rule.engine.rest.TbRestApiCallNode",
+        "name": "TO-DO REST API telegram call",
+        "debugMode": false,
+        "singletonMode": false,
+        "configuration": {
+          "restEndpointUrlPattern": "https://api.telegram.org/bot5846280715:AAGFX4YVxF6cupXcewTaGIlJl_kKilmcbrY/sendMessage",
+          "requestMethod": "POST",
+          "useSimpleClientHttpFactory": false,
+          "ignoreRequestBody": false,
+          "enableProxy": false,
+          "useSystemProxyProperties": false,
+          "proxyScheme": null,
+          "proxyHost": null,
+          "proxyPort": 0,
+          "proxyUser": null,
+          "proxyPassword": null,
+          "readTimeoutMs": 0,
+          "maxParallelRequestsCount": 0,
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "useRedisQueueForMsgPersistence": false,
+          "trimQueue": false,
+          "maxQueueSize": 0,
+          "credentials": {
+            "type": "anonymous"
+          }
+        },
+        "externalId": null
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 3,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 3,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 4,
+        "toIndex": 5,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 4,
+        "toIndex": 5,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 5,
+        "toIndex": 6,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 5,
+        "toIndex": 6,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 17,
+        "type": "True"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 20,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 20,
+        "type": "False"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 9,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 9,
+        "type": "False"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 36,
+        "type": "True"
+      },
+      {
+        "fromIndex": 8,
+        "toIndex": 0,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 8,
+        "toIndex": 0,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 8,
+        "toIndex": 0,
+        "type": "False"
+      },
+      {
+        "fromIndex": 8,
+        "toIndex": 0,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 9,
+        "toIndex": 33,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 9,
+        "toIndex": 33,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 9,
+        "toIndex": 33,
+        "type": "False"
+      },
+      {
+        "fromIndex": 10,
+        "toIndex": 11,
+        "type": "True"
+      },
+      {
+        "fromIndex": 10,
+        "toIndex": 14,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 10,
+        "toIndex": 14,
+        "type": "False"
+      },
+      {
+        "fromIndex": 11,
+        "toIndex": 12,
+        "type": "True"
+      },
+      {
+        "fromIndex": 11,
+        "toIndex": 13,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 11,
+        "toIndex": 13,
+        "type": "False"
+      },
+      {
+        "fromIndex": 12,
+        "toIndex": 4,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 12,
+        "toIndex": 4,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 12,
+        "toIndex": 4,
+        "type": "False"
+      },
+      {
+        "fromIndex": 12,
+        "toIndex": 4,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 13,
+        "toIndex": 4,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 13,
+        "toIndex": 4,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 13,
+        "toIndex": 4,
+        "type": "False"
+      },
+      {
+        "fromIndex": 13,
+        "toIndex": 4,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 14,
+        "toIndex": 6,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 14,
+        "toIndex": 6,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 14,
+        "toIndex": 6,
+        "type": "False"
+      },
+      {
+        "fromIndex": 15,
+        "toIndex": 16,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 15,
+        "toIndex": 16,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 16,
+        "toIndex": 21,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 16,
+        "toIndex": 21,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 17,
+        "toIndex": 18,
+        "type": "True"
+      },
+      {
+        "fromIndex": 17,
+        "toIndex": 19,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 17,
+        "toIndex": 19,
+        "type": "False"
+      },
+      {
+        "fromIndex": 18,
+        "toIndex": 15,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 18,
+        "toIndex": 15,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 18,
+        "toIndex": 15,
+        "type": "False"
+      },
+      {
+        "fromIndex": 18,
+        "toIndex": 15,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 19,
+        "toIndex": 15,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 19,
+        "toIndex": 15,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 19,
+        "toIndex": 15,
+        "type": "False"
+      },
+      {
+        "fromIndex": 19,
+        "toIndex": 15,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 20,
+        "toIndex": 21,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 20,
+        "toIndex": 21,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 20,
+        "toIndex": 21,
+        "type": "False"
+      },
+      {
+        "fromIndex": 21,
+        "toIndex": 24,
+        "type": "True"
+      },
+      {
+        "fromIndex": 21,
+        "toIndex": 25,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 21,
+        "toIndex": 25,
+        "type": "False"
+      },
+      {
+        "fromIndex": 22,
+        "toIndex": 23,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 22,
+        "toIndex": 23,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 23,
+        "toIndex": 26,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 23,
+        "toIndex": 26,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 24,
+        "toIndex": 22,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 24,
+        "toIndex": 22,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 24,
+        "toIndex": 22,
+        "type": "False"
+      },
+      {
+        "fromIndex": 24,
+        "toIndex": 22,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 25,
+        "toIndex": 26,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 25,
+        "toIndex": 26,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 25,
+        "toIndex": 26,
+        "type": "False"
+      },
+      {
+        "fromIndex": 26,
+        "toIndex": 29,
+        "type": "True"
+      },
+      {
+        "fromIndex": 26,
+        "toIndex": 30,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 26,
+        "toIndex": 30,
+        "type": "False"
+      },
+      {
+        "fromIndex": 27,
+        "toIndex": 28,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 27,
+        "toIndex": 28,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 28,
+        "toIndex": 7,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 28,
+        "toIndex": 7,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 29,
+        "toIndex": 27,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 29,
+        "toIndex": 27,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 29,
+        "toIndex": 27,
+        "type": "False"
+      },
+      {
+        "fromIndex": 29,
+        "toIndex": 27,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 30,
+        "toIndex": 7,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 30,
+        "toIndex": 7,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 30,
+        "toIndex": 7,
+        "type": "False"
+      },
+      {
+        "fromIndex": 31,
+        "toIndex": 8,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 31,
+        "toIndex": 8,
+        "type": "False"
+      },
+      {
+        "fromIndex": 31,
+        "toIndex": 32,
+        "type": "True"
+      },
+      {
+        "fromIndex": 32,
+        "toIndex": 0,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 32,
+        "toIndex": 0,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 32,
+        "toIndex": 0,
+        "type": "False"
+      },
+      {
+        "fromIndex": 32,
+        "toIndex": 0,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 33,
+        "toIndex": 34,
+        "type": "True"
+      },
+      {
+        "fromIndex": 33,
+        "toIndex": 35,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 33,
+        "toIndex": 35,
+        "type": "False"
+      },
+      {
+        "fromIndex": 34,
+        "toIndex": 2,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 34,
+        "toIndex": 2,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 34,
+        "toIndex": 2,
+        "type": "False"
+      },
+      {
+        "fromIndex": 34,
+        "toIndex": 2,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 36,
+        "toIndex": 31,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 36,
+        "toIndex": 31,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 36,
+        "toIndex": 31,
+        "type": "False"
+      },
+      {
+        "fromIndex": 37,
+        "toIndex": 38,
+        "type": "True"
+      },
+      {
+        "fromIndex": 37,
+        "toIndex": 44,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 37,
+        "toIndex": 44,
+        "type": "False"
+      },
+      {
+        "fromIndex": 38,
+        "toIndex": 42,
+        "type": "True"
+      },
+      {
+        "fromIndex": 38,
+        "toIndex": 43,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 38,
+        "toIndex": 43,
+        "type": "False"
+      },
+      {
+        "fromIndex": 39,
+        "toIndex": 45,
+        "type": "True"
+      },
+      {
+        "fromIndex": 39,
+        "toIndex": 46,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 39,
+        "toIndex": 46,
+        "type": "False"
+      },
+      {
+        "fromIndex": 40,
+        "toIndex": 41,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 40,
+        "toIndex": 41,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 41,
+        "toIndex": 39,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 41,
+        "toIndex": 39,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 42,
+        "toIndex": 40,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 42,
+        "toIndex": 40,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 42,
+        "toIndex": 40,
+        "type": "False"
+      },
+      {
+        "fromIndex": 42,
+        "toIndex": 40,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 43,
+        "toIndex": 40,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 43,
+        "toIndex": 40,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 43,
+        "toIndex": 40,
+        "type": "False"
+      },
+      {
+        "fromIndex": 43,
+        "toIndex": 40,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 44,
+        "toIndex": 39,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 44,
+        "toIndex": 39,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 44,
+        "toIndex": 39,
+        "type": "False"
+      },
+      {
+        "fromIndex": 45,
+        "toIndex": 47,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 45,
+        "toIndex": 47,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 45,
+        "toIndex": 47,
+        "type": "False"
+      },
+      {
+        "fromIndex": 45,
+        "toIndex": 47,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 46,
+        "toIndex": 49,
+        "type": "Cleared"
+      },
+      {
+        "fromIndex": 46,
+        "toIndex": 49,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 46,
+        "toIndex": 49,
+        "type": "False"
+      },
+      {
+        "fromIndex": 47,
+        "toIndex": 48,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 47,
+        "toIndex": 48,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 48,
+        "toIndex": 49,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 48,
+        "toIndex": 49,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 49,
+        "toIndex": 50,
+        "type": "True"
+      },
+      {
+        "fromIndex": 49,
+        "toIndex": 51,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 49,
+        "toIndex": 51,
+        "type": "False"
+      },
+      {
+        "fromIndex": 50,
+        "toIndex": 52,
+        "type": "Created"
+      },
+      {
+        "fromIndex": 50,
+        "toIndex": 52,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 50,
+        "toIndex": 52,
+        "type": "False"
+      },
+      {
+        "fromIndex": 50,
+        "toIndex": 52,
+        "type": "Updated"
+      },
+      {
+        "fromIndex": 52,
+        "toIndex": 53,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 52,
+        "toIndex": 53,
+        "type": "Success"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}
