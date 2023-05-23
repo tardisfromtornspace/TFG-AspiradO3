@@ -101,7 +101,7 @@
  * handlers and start an HTTPS server.
  */
 
-static const char *TAG = "ApiradO3";
+static const char *TAG = "AspiradO3";
 
 xSemaphoreHandle Semaphore;
 int enEllo = 0;
@@ -161,8 +161,8 @@ int enEllo = 0;
         }                                  \
     }
 
-#define SDSMSPIN "6875" // TO-DO AJUSTA PARA QUE ESTÉ EN SDKCONFIG
-#define APN "mms.vodafone.net" // TO-DO AJUSTA PARA QUE ESTÉ EN SDKCONFIG
+#define SDSMSPIN CONFIG_MIPIN
+#define APN CONFIG_MIAPN
 
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 #include "minmea.h"
@@ -170,13 +170,6 @@ int enEllo = 0;
 #define TXD_PIN 17 // Necesario para el SIM800
 #define RXD_PIN 3 // 16 Necesario para el módulo GPS
 static const int RX_BUF_SIZE = 4096;
-
-/* LED TO-DO Borrar si no es necesario */ 
-//#define PIN_SWITCH 2 // 35
-//#define BLINK_GPIO CONFIG_BLINK_GPIO // 18 originariamente TO-DO borrar si no es necesario
-//#define GPIO_WAKEUP_NUM PIN_SWITCH
-//#define GPIO_WAKEUP_LEVEL 0
-// Fin del LED
 
 // I2C nota: hemos elegido el 4 y el 0, puede que de incompatibilidades con otros módulos fuera de ESP32
 /*
@@ -281,8 +274,8 @@ extern const uint8_t server_rootTelegram_cert_pem_end[] asm("_binary_http2_teleg
 /* The HTTP/2 server to connect to */
 //#define HTTP2_SERVER_URI "https://api.telegram.org"
 /* A GET request that keeps streaming current time every second */
-//#define TELEGRAMTOKEN "CAMBIALO POR EL TUYO" // TO-DO NO LO SUBAS CON ESTO A LA ENTREGA!!!!
-//#define CHATTOKEN "CAMBIA POR EL TUYO"       // TO-DO NO LO SUBAS CON ESTO A LA ENTREGA!!!!
+//#define TELEGRAMTOKEN "CAMBIALO POR EL TUYO" // NO LO SUBAS CON EL TOKEN A LA ENTREGA!!!!
+//#define CHATTOKEN "CAMBIA POR EL TUYO"       // NO LO SUBAS CON EL TOKEN A LA ENTREGA!!!!
 #define UNIVERSITY "SBC22_M01"               //"UPM"
 #define TOKENMQTT "YSRNEFDXnyIGhX9OaylG"
 #define MQTTURI "mqtt://demo.thingsboard.io"
@@ -317,7 +310,7 @@ int ozonoTrasFiltro = 0; // Ozono detectado tras el filtro activo de carbono
 int temperaturaAtmos = 0; // Temperatura atmosferica en grados centigrados.
 int humedadAtmos = 0; // Humedad relativa en %. Va de 0 a 100
 
-/* Info GPS TO-DO ajustar*/
+/* Info GPS */
 int gpsdateyear = 2000;
 int gpsdatemonth = 1;
 int gpsdateday = 1;
@@ -556,13 +549,7 @@ static void rx_task(void *arg)
 
         ESP_LOGI(RX_TASK_TAG, "Read %d bytes: '%s'", length, esp_gps->buffer); // TO-DO comentar luego
 
-        /* make sure the line is a standard string TO-DO*/
         esp_gps->buffer[length] = '\0';
-        /* Send new line to handle */
-//        ESP_LOGI(RX_TASK_TAG, "Inicio decoding:");
-        //if (gps_decode(esp_gps, length + 1) != ESP_OK) {
-        //    ESP_LOGW(RX_TASK_TAG, "GPS decode line failed");
-        //}
 
         parse_line((char *)esp_gps->buffer);
         //free(data);
@@ -609,12 +596,12 @@ static void tx_task(void *arg)
     sendData(TX_TASK_TAG, "AT+CSQ\r\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-    sendData(TX_TASK_TAG, "AT+CPIN?\r\n");
+    /*sendData(TX_TASK_TAG, "AT+CPIN?\r\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     sendData(TX_TASK_TAG, "AT+CCID\r\n");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
-
+    
     sendData(TX_TASK_TAG, "AT+CGREG=1\r\n");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
 
@@ -629,10 +616,10 @@ static void tx_task(void *arg)
 
     sendData(TX_TASK_TAG, "AT+COPS?\r\n");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
-
+    */
     while(1){
         
-        sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
+        /*sendData(TX_TASK_TAG, "AT+CGATT?\r\n");
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CCID\r\n");
@@ -642,7 +629,7 @@ static void tx_task(void *arg)
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+COPS?\r\n");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);*/
 
         ESP_LOGI(TAG, "ESPERO A LLAMADA DEL SEMAFORO");
         xSemaphoreTake(Semaphore, portMAX_DELAY);
@@ -651,7 +638,7 @@ static void tx_task(void *arg)
         sendData(TX_TASK_TAG, "AT+CIPSHUT\r\n");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión TO-DO coméntalos y pruébalo
+        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n");
         vTaskDelay(500 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+CIPMUX=0\r\n");
@@ -660,16 +647,15 @@ static void tx_task(void *arg)
 
         sprintf(mensajito, "AT+CSTT=\"%s\"\r\n", APN);
         mess = strcat(mensajito, finDeMensaje);
-        sendData(TX_TASK_TAG, mess); // TO-DO comprobar
-        //sendData(TX_TASK_TAG, "AT+CSTT=\"mms.vodafone.net\"\r\n"); // PUEDE QUE REQUIERA DE USR Y PASS La de llamaya es \"mms.orange.es\", la de lowi es \"mms.vodafone.net\"
+        sendData(TX_TASK_TAG, mess);
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         sendData(TX_TASK_TAG, "AT+CIICR\r\n"); // Conexion inalámbrica
         vTaskDelay(5000 / portTICK_PERIOD_MS);
         sendData(TX_TASK_TAG, "AT+CIFSR\r\n"); // IP local
         vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-        sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n"); // Estado de la conexión TO-DO coméntalos y pruébalo
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        /*sendData(TX_TASK_TAG, "AT+CIPSTATUS\r\n");
+        vTaskDelay(500 / portTICK_PERIOD_MS);*/
 
         /* Etapa conexión TCP/UDP y cliente-servidor */
         sendData(TX_TASK_TAG, "AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r\n");
@@ -681,7 +667,7 @@ static void tx_task(void *arg)
         sendData(TX_TASK_TAG, "AT+SAPBR=2,1\r\n");
         vTaskDelay(15000 / portTICK_PERIOD_MS);
 
-        /* Permite comunicación GPS de latitud, longitud y fecha-tiempo
+        /* Permite comunicación GPS de latitud, longitud y fecha-tiempo Comentado por ser demasiado costoso
         sendData(TX_TASK_TAG, "AT+CIPGSMLOC=1,1\r\n");
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         */
@@ -739,7 +725,7 @@ static void tx_task(void *arg)
         cJSON_Delete(root);
 
         sendData(TX_TASK_TAG, "AT+HTTPREAD\r\n"); // Leer los datos tras ejecutar
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
 
         sendData(TX_TASK_TAG, "AT+HTTPTERM\r\n"); // Terminar servicio HTTP
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -867,13 +853,13 @@ void miESPes(esp_err_t retA){
     }
     else if (retA == ESP_FAIL)
     {
-        ESP_LOGW(TAG, "Command error, slave hasn't ACK the transfer");
+        ESP_LOGW(TAG, "Command error, slave ADC hasn't ACK the transfer");
     }
     else
     {
         ESP_LOGW(TAG, "Read failed");
     }
-//    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+    //ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
 }
 
 /* ADC de adafruit*/
@@ -983,7 +969,7 @@ void miESPTempHumes(esp_err_t retA){
     {
         ESP_LOGW(TAG, "Read failed");
     }
-//    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
+    //ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
 }
 
 static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, uint8_t reg_addrLSB, size_t len)
@@ -1004,7 +990,6 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
 
     i2c_cmd_link_delete(cmd);
     miESPTempHumes(retA);
-//    ESP_LOGI(TAG, "My ESP-CODE is %d", retA);
 
     i2c_cmd_handle_t cmd3 = i2c_cmd_link_create();
     ESP_ERROR_CHECK(i2c_master_start(cmd3));
@@ -1040,9 +1025,8 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
     {
         miESPTempHumes(ret);
     }
-//    ESP_LOGI(TAG, "My ESP-CODE is %d", ret);
 
-//    esp_log_buffer_hex(TAG, dato, len);
+//  esp_log_buffer_hex(TAG, dato, len);
     temperaturaAtmos = -45 + (int) 175 * (dato[0] * 256 + dato[1])/((double) 65536-1); // Este sensor manda primero el MSB y luego el LSB, y eso se debe convertir a las unidades
     humedadAtmos = (int) fmax(0, fmin(100, 100 * (dato[3] * 256 + dato[4])/((double) 65536-1))); // Este sensor manda primero el MSB y luego el LSB, lo convierto a humedad relativa y ajusto al rango 0-100
 
@@ -1054,17 +1038,16 @@ static esp_err_t tempHum_register_read(uint8_t slave_addr, uint8_t reg_addrMSB, 
 
 // MQTT
 esp_mqtt_client_config_t mqtt_cfg = {
-    .uri = MQTTURI, //"mqtt://demo.thingsboard.io", // api/v1/Y0kg9ua7tm6s4vaB0X1H/telemetry" ?
+    .uri = MQTTURI,
     //.event_handle = mqtt_event_handler,
     .port = 1883,
-    .username = TOKENMQTT, //"YSRNEFDXnyIGhX9OaylG", // token MQTT
+    .username = TOKENMQTT,
 };
 
 esp_mqtt_client_handle_t client;
 
-static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
+static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event) // TO-DO ver si puedo hacer que en caso de error reinicie el MQTT con el client, mejora de seguridad
 {
-    // TO-DO ver si puedo hacer que en caso de error reinicie el MQTT con el client, mejora de seguridad
     switch (event->event_id)
     {
     case MQTT_EVENT_CONNECTED:
@@ -1151,8 +1134,7 @@ static bool adc_calibration_init(void)
     else if (ret == ESP_OK)
     {
         cali_enable = true;
-        esp_adc_cal_characterize(ADC_UNIT_1, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc1_chars);
-        // TO-DO si usamos un solo módulo adc no deberíamos comentar esto?
+        esp_adc_cal_characterize(ADC_UNIT_1, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc1_chars); 
         esp_adc_cal_characterize(ADC_UNIT_2, ADC_EXAMPLE_ATTEN, ADC_WIDTH_BIT_DEFAULT, 0, &adc2_chars);
     }
     else
@@ -1164,6 +1146,7 @@ static bool adc_calibration_init(void)
 }
 /*
  * TELEGRAM
+ * TO-DO Investigar formas de aplicar esto para mejoras de seguridad, o como un segundo dispositivo
  */
 /*int handle_echo_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
 {
@@ -1200,7 +1183,6 @@ char *cutoff(const char *str, int from, int to)
     memcpy(cut, fromit, to);
     return begin;
 }*/
-/* TO-DO Investigar formas de aplicar esto para mejoras de seguridad, o como un segundo dispositivo */
 /*int handle_get_response(struct sh2lib_handle *handle, const char *data, size_t len, int flags)
 {
     if (len)
@@ -1453,7 +1435,7 @@ static void set_time(void) // Tiempo es necesario para HTTP2
         {
             printf("Failed to connect\n");
             http2Caido = 1;
-            vTaskDelete(NULL); // TO-DO ver si se puede quitar o poner de forma que al cerrarse active una variable global que indique durante algún ciclo que debe reiniciarse.
+            vTaskDelete(NULL);
             return;
         }
         printf("Connection done\n");
@@ -1499,14 +1481,12 @@ static esp_err_t root_get_handler(httpd_req_t *req)
     if (s_reset_state != 0)
     {
         sprintf(mensajito, "<h1>La ESP32 se va a resetear en %d</h1>", s_reset_state);
-        mess = strcat(mensajito, finDePagina);
     }
     else
     {
         sprintf(mensajito, "<h1> Acceso Web http a AspiradO3 </h1><h1> (Refresh 10 segundos) </h1> <p><a href='/reset'><button style='height:50px;width:100px'>Resetear ESP32</button></a></p> <h1> V sol (mV): %d</h1> <h1> Ozono Estribor (ppm): %d</h1><h1> Ozono Babor (ppm): %d</h1><h1> Ozono tras filtros (ppm): %d</h1>", voltajeSolar, ozonoEstribor, ozonoBabor, ozonoTrasFiltro);
-        mess = strcat(mensajito, finDePagina);
-        // TO-DO mete el mess = strcat(mensajito, finDePagina); tras el if-else en vez de dentro del if y del else
     }
+    mess = strcat(mensajito, finDePagina);
     httpd_resp_send(req, mess, HTTPD_RESP_USE_STRLEN);
 
     return ESP_OK;
@@ -1768,21 +1748,21 @@ void app_main(void)
     configure_analog();
 
     // iniciar I2C
-    // Iniciar el display TO-DO ver como borrar el display, pero no borres su init
+    // Iniciar el display TO-DO ver como borrar el display, pero no borres su init; BORRA LOS CONFIG DEL DISPLAY SSD1306 EN LA VERSIÓN FINAL
     SSD1306_t dev;
     ESP_ERROR_CHECK(i2c_master_init(&dev, I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, 0));
     ESP_LOGI(TAG, "I2C initialized successfully");
     // Variables auxiliares del I2C display, e inicialización extra del display
-    ssd1306_clear_screen(&dev, false); // El display a 0, no a valores basura
+    //ssd1306_clear_screen(&dev, false); // El display a 0, no a valores basura
 
-#if CONFIG_SSD1306_128x64
-    ESP_LOGI(TAG, "Panel is 128x64");
-    ssd1306_init(&dev, 128, 64);
-#endif // CONFIG_SSD1306_128x64
-#if CONFIG_SSD1306_128x32
-    ESP_LOGI(TAG, "Panel is 128x32");
-    ssd1306_init(&dev, 128, 32);
-#endif // CONFIG_SSD1306_128x32
+//#if CONFIG_SSD1306_128x64
+//    ESP_LOGI(TAG, "Panel is 128x64");
+//    ssd1306_init(&dev, 128, 64);
+//#endif // CONFIG_SSD1306_128x64
+//#if CONFIG_SSD1306_128x32
+//    ESP_LOGI(TAG, "Panel is 128x32");
+//    ssd1306_init(&dev, 128, 32);
+//#endif // CONFIG_SSD1306_128x32
 
     // Iniciar ADC
 #if CONFIG_IDF_TARGET_ESP32 // El WiFi usa en adc2 así que no podemos usar ese segundo módulo, mejor multiplexamos el adc1 y hay variables qur no necesitamos usar
@@ -1892,11 +1872,7 @@ void app_main(void)
     int ozonoTrasFiltroAntAnt = -1;
     int ozonoBaborC = -1;
     int ozonoEstriborC = -1;
-    int ozonoTrasFiltroC  = -1;
-
-    /*while(1){ // TO-DO quitar de la version final
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }*/
+    int ozonoTrasFiltroC  = -1; /*while(1){ vTaskDelay(pdMS_TO_TICKS(1000));} // TO-DO quitar de la version final */
 
     while(countReadInRowBabor <= timeToReadConsistency && countReadInRowEstribor <= timeToReadConsistency && countReadInRowTrasFiltro <= timeToReadConsistency) {
         ESP_LOGI(TAG, "Procedo a leer ADC 0 (CALIBRACION)");
@@ -1960,12 +1936,12 @@ void app_main(void)
 
 
     /*
-     * Bucle infinito TO-DO mejorar con Tasks?
+     * Bucle infinito
      */
     while (1)
     {
-        // TO-DO ESTAS LÍNEA DE ABAJO ES INNECESARIA EN LA VERSIÓN FINAL, SOLO LA USAMOS PARA VERIFICAR NIVEL DE ENERGÍA, BORRAR EN VERSION FINAL
-        ssd1306_clear_screen(&dev, false);
+        // TO-DO ESTA LÍNEA DE ABAJO ES INNECESARIA EN LA VERSIÓN FINAL, SOLO LA USAMOS PARA VERIFICAR NIVEL DE ENERGÍA, BORRAR EN VERSION FINAL
+        //ssd1306_clear_screen(&dev, false);
 
         if (s_reset_state != 0)
         {
@@ -2032,7 +2008,7 @@ void app_main(void)
 
         /* FASE 3: AJUSTE DE LECTURAS DE OZONO */
 
-        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBaborC +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor, RESLBABOR, R0babor); // TO-DO ajuste
+        ozonoBabor = multCorrBabor * ajustarValoresOzono(ozonoBaborC +  corrInicialSensorMayor, humedadAtmos, temperaturaAtmos, correccionSensorBabor, RESLBABOR, R0babor);
         ozonoEstribor =  multCorrEstribor * ajustarValoresOzono(ozonoEstriborC + corrInicialSensorMedio, humedadAtmos, temperaturaAtmos, correccionSensorEstribor, RESLESTRIBOR, R0estribor);
         ozonoTrasFiltro = multCorrTrasFiltro * ajustarValoresOzono(ozonoTrasFiltroC + corrInicialSensorMenor, humedadAtmos, temperaturaAtmos, correccionSensorTrasFiltro, RESLTRASFILTRO, R0trasFiltro);
         ESP_LOGI(TAG, "correcion O3 babor: %d", ozonoBabor );
@@ -2040,7 +2016,7 @@ void app_main(void)
         ESP_LOGI(TAG, "correcion O3 tras filtro: %d", ozonoTrasFiltro );
 
         /* FASE 4: CORRECIÓN DE RUMBO SEGÚN SENSORES Y GPS/GSM */
-        /*TO-DO añade márgenes de tolerancia y sistema de control según pruebas del prototipo final NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
+        /* TO-DO añade márgenes de tolerancia y sistema de control según pruebas del prototipo final NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
             estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
@@ -2053,7 +2029,7 @@ void app_main(void)
         }
         /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
         if (gpsspeed - gpsspeedAnt > 50 || gpsspeed > 50) {
-            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD, TOMO LO DE GPS*/
+            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD, Y LOS PESOS ADECUADOS DEL DISPOSITIVO, TOMO LO DE GPS*/
             estadoTimonInterno = -45;
         } else {
             estadoTimonInterno = 45;

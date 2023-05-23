@@ -660,6 +660,8 @@
     "MDNS_TASK_PRIORITY": 1,
     "MDNS_TASK_STACK_SIZE": 4096,
     "MDNS_TIMER_PERIOD_MS": 100,
+    "MIAPN": "mms.vodafone.net",
+    "MIPIN": "6875",
     "MQTT_CUSTOM_OUTBOX": false,
     "MQTT_MSG_ID_INCREMENTAL": false,
     "MQTT_PROTOCOL_311": true,

@@ -2288,6 +2288,26 @@
                         "range": null,
                         "title": "VTG Statement",
                         "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "This value sets the PIN number for your SIM card used for GSM communications",
+                        "id": "MIPIN",
+                        "name": "MIPIN",
+                        "range": null,
+                        "title": "Mi pin",
+                        "type": "string"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "This value sets the APN used for GSM communications",
+                        "id": "MIAPN",
+                        "name": "MIAPN",
+                        "range": null,
+                        "title": "Mi punto de acceso",
+                        "type": "string"
                     }
                 ],
                 "depends_on": null,

@@ -178,6 +178,19 @@ menu "Example Configuration"
             
                 - Ground speed (knots, km/h) and course over ground (degrees);
                 - Magnetic variation;
+        
+        config MIPIN
+            string "Mi pin"
+            default "6875"
+            help
+                This value sets the PIN number for your SIM card used for GSM communications
+
+        config MIAPN
+            string "Mi punto de acceso"
+            default "mms.vodafone.net"
+            help
+                This value sets the APN used for GSM communications
+                
             
     endmenu
     
