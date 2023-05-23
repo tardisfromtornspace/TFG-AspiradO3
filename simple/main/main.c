@@ -139,13 +139,6 @@ int enEllo = 0;
 #define VOLTREF 4.500 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
 #define VOLTREFDATASHEET 5.000
 
-/*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
-#include "minmea.h"
-#define UART UART_NUM_2
-#define TXD_PIN 17 // Necesario para el SIM800
-#define RXD_PIN 3 // 16 Necesario para el módulo GPS
-static const int RX_BUF_SIZE = 4096;
-
 // I2C nota: hemos elegido el 4 y el 0, puede que de incompatibilidades con otros módulos fuera de ESP32
 /*
      GPIO num         RTC GPIO Num
@@ -213,6 +206,13 @@ Por lo tanto tenemos
 #define ACK_CHECK_DIS 0x0             /*!< I2C master will not check ack from slave */
 #define ACK_VAL I2C_MASTER_ACK        /*!< I2C ack value */
 #define NACK_VAL I2C_MASTER_LAST_NACK // I2C_MASTER_NACK    /*!< I2C nack value */
+
+/*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
+#include "minmea.h"
+#define UART UART_NUM_2
+#define TXD_PIN 17 // Necesario para el SIM800
+#define RXD_PIN 3 // 16 Necesario para el módulo GPS
+static const int RX_BUF_SIZE = 4096;
 
 /* GPS y GSM */
 #define CTRLZ 26 // Definir Ctrl+Z
