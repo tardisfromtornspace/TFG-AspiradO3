@@ -97,8 +97,8 @@
 // Para motores
 #include "driver/mcpwm.h"
 
-/* A simple example that demonstrates how to create GET and POST
- * handlers and start an HTTPS server.
+/* A simple example made to save the World
+ * via a flying balloon vacuum cleaner.
  */
 
 static const char *TAG = "AspiradO3";
@@ -139,31 +139,6 @@ int enEllo = 0;
 #define VOLTREF 4.500 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
 #define VOLTREFDATASHEET 5.000
 
-#define CTRLZ 26 // Definir Ctrl+Z
-
-/* GPS y GSM */
-#define TIME_ZONE (+0)   // Tiempo del meridiano de Greenwich
-#define YEAR_BASE (2000) // Date in GPS starts from 2000
-
-#define UART_NUM_2_RXD_DIRECT_GPIO_NUM 16
-#define UART_GPIO3_DIRECT_CHANNEL UART_NUM_0
-
-#define NMEA_PARSER_CONFIG_CUSTOM()       \
-    {                                      \
-        .uart = {                          \
-            .uart_port = UART_NUM_1,       \
-            .rx_pin = 17,                  \
-            .baud_rate = 9600,             \
-            .data_bits = UART_DATA_8_BITS, \
-            .parity = UART_PARITY_DISABLE, \
-            .stop_bits = UART_STOP_BITS_1, \
-            .event_queue_size = 16         \
-        }                                  \
-    }
-
-#define SDSMSPIN CONFIG_MIPIN
-#define APN CONFIG_MIAPN
-
 /*de https://github.com/ciruu1/SBC/blob/master/main/main.c MUCHAS GRACIAS */
 #include "minmea.h"
 #define UART UART_NUM_2
@@ -187,9 +162,6 @@ EN LOS PINES NO PONGAIS DE 6 A 11 QUE ESOS SON DE LA FLASH
 #define I2C_MASTER_TX_BUF_DISABLE 0   /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE 0   /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_TIMEOUT_MS 10000
-
-#define CO2_SENSOR_ADDR 0x5A /*!< Slave address of the CO2 sensor is 0x5A, when we add an additional binary 1 behind it transforms into 0xB5 */
-#define CO2_REG_ADDR 0x5A    /*!< Register addresses of the CO2 lecture register */
 
 #define TEMPHUM_SENSOR_ADDR 0x44 /*Dir sensor tempHum*/
 #define COMANDO_TEMPHUM_MSB 0x24
@@ -242,6 +214,30 @@ Por lo tanto tenemos
 #define ACK_VAL I2C_MASTER_ACK        /*!< I2C ack value */
 #define NACK_VAL I2C_MASTER_LAST_NACK // I2C_MASTER_NACK    /*!< I2C nack value */
 
+/* GPS y GSM */
+#define CTRLZ 26 // Definir Ctrl+Z
+#define TIME_ZONE (+0)   // Tiempo del meridiano de Greenwich
+#define YEAR_BASE (2000) // Date in GPS starts from 2000
+
+#define UART_NUM_2_RXD_DIRECT_GPIO_NUM 16
+#define UART_GPIO3_DIRECT_CHANNEL UART_NUM_0
+
+#define NMEA_PARSER_CONFIG_CUSTOM()       \
+    {                                      \
+        .uart = {                          \
+            .uart_port = UART_NUM_1,       \
+            .rx_pin = 17,                  \
+            .baud_rate = 9600,             \
+            .data_bits = UART_DATA_8_BITS, \
+            .parity = UART_PARITY_DISABLE, \
+            .stop_bits = UART_STOP_BITS_1, \
+            .event_queue_size = 16         \
+        }                                  \
+    }
+
+#define SDSMSPIN CONFIG_MIPIN
+#define APN CONFIG_MIAPN
+
 // ADC Channels
 #if CONFIG_IDF_TARGET_ESP32
 #define ADC4_EXAMPLE_CHAN0 ADC1_CHANNEL_5
@@ -266,10 +262,11 @@ static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 #elif CONFIG_IDF_TARGET_ESP32S3
 #define ADC_EXAMPLE_CALI_SCHEME ESP_ADC_CAL_VAL_EFUSE_TP_FIT
 #endif
-// Telegram
 
-extern const uint8_t server_rootTelegram_cert_pem_start[] asm("_binary_http2_telegram_root_cert_pem_start");
-extern const uint8_t server_rootTelegram_cert_pem_end[] asm("_binary_http2_telegram_root_cert_pem_end");
+// Telegram
+// DESCOMENTA ESTAS TRES LÍNEAS DE ABAJO CUANDO NECESITES PROBAR LA MEJORA DE SEGURIDAD 
+//extern const uint8_t server_rootTelegram_cert_pem_start[] asm("_binary_http2_telegram_root_cert_pem_start");
+//extern const uint8_t server_rootTelegram_cert_pem_end[] asm("_binary_http2_telegram_root_cert_pem_end");
 
 /* The HTTP/2 server to connect to */
 //#define HTTP2_SERVER_URI "https://api.telegram.org"
