@@ -276,11 +276,13 @@ static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 #define UNIVERSITY "SBC22_M01"               //"UPM"
 #define TOKENMQTT "YSRNEFDXnyIGhX9OaylG"
 #define MQTTURI "mqtt://demo.thingsboard.io"
+/* DESCOMENTAR ESTO EN LA MEJORA DE SEGURIDAD 
 int ini_OFFSET = 0;
 int last_msg_received = 559291163;
 int extraOffset = 0;
 int conexionEnProceso = 1;
 int conproc = -1;
+*/
 
 // DESCOMENTA ESTAS TRES LÍNEAS DE ABAJO CUANDO NECESITES PROBAR LA MEJORA DE SEGURIDAD 
 // 
