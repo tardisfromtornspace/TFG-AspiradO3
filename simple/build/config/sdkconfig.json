@@ -662,6 +662,8 @@
     "MDNS_TIMER_PERIOD_MS": 100,
     "MIAPN": "mms.vodafone.net",
     "MIPIN": "6875",
+    "MITOKENMQTT": "YSRNEFDXnyIGhX9OaylG",
+    "MIUNIVERSITY": "UPM Campus Sur",
     "MQTT_CUSTOM_OUTBOX": false,
     "MQTT_MSG_ID_INCREMENTAL": false,
     "MQTT_PROTOCOL_311": true,

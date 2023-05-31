@@ -190,8 +190,19 @@ menu "Example Configuration"
             default "mms.vodafone.net"
             help
                 This value sets the APN used for GSM communications
+
+        config MITOKENMQTT
+            string "Mi punto de acceso"
+            default "YSRNEFDXnyIGhX9OaylG"
+            help
+                This value sets the APN used for GSM communications
                 
-            
+        config MIUNIVERSITY
+            string "Mi punto de acceso"
+            default "UPM Campus Sur"
+            help
+                This value sets the APN used for GSM communications
+    
     endmenu
     
 endmenu

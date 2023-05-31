@@ -273,8 +273,8 @@ static const char *TAG_CH[1][10] = {{"ADC2_CH5"}};
 /* A GET request that keeps streaming current time every second */
 //#define TELEGRAMTOKEN "CAMBIALO POR EL TUYO" // NO LO SUBAS CON EL TOKEN A LA ENTREGA!!!!
 //#define CHATTOKEN "CAMBIA POR EL TUYO"       // NO LO SUBAS CON EL TOKEN A LA ENTREGA!!!!
-#define UNIVERSITY "SBC22_M01"               //"UPM"
-#define TOKENMQTT "YSRNEFDXnyIGhX9OaylG"
+#define UNIVERSITY CONFIG_MIUNIVERSITY //"UPM"
+#define TOKENMQTT CONFIG_MITOKENMQTT
 #define MQTTURI "mqtt://demo.thingsboard.io"
 /* DESCOMENTAR ESTO EN LA MEJORA DE SEGURIDAD 
 int ini_OFFSET = 0;

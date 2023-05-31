@@ -2308,6 +2308,26 @@
                         "range": null,
                         "title": "Mi punto de acceso",
                         "type": "string"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "This value sets the APN used for GSM communications",
+                        "id": "MITOKENMQTT",
+                        "name": "MITOKENMQTT",
+                        "range": null,
+                        "title": "Mi punto de acceso",
+                        "type": "string"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": "This value sets the APN used for GSM communications",
+                        "id": "MIUNIVERSITY",
+                        "name": "MIUNIVERSITY",
+                        "range": null,
+                        "title": "Mi punto de acceso",
+                        "type": "string"
                     }
                 ],
                 "depends_on": null,
