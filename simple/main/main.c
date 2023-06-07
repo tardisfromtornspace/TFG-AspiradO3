@@ -139,6 +139,7 @@ int enEllo = 0;
 #define VOLTREF 4.500 // En mV ya que las medidas de ADC las obtenemos en mV. Esto en teoría es vref pero a lo mejor difiere (p.ej 3.3V o 5V), por eso no he puesto VOLTREF vref, además tantos motores drenan
 #define VOLTREFDATASHEET 5.000
 
+
 // I2C nota: hemos elegido el 4 y el 0, puede que de incompatibilidades con otros módulos fuera de ESP32
 /*
      GPIO num         RTC GPIO Num
@@ -316,8 +317,8 @@ int gpsdateday = 1;
 int gpstimhour = 1;
 int gpstimminute = 0;
 int gpstimsecond = 0;
-double gpslatitude = 0.0;
-double gpslongitude = 0.0;
+double gpslatitude = 0.0; double gpslatitudeOrig = 0.0;
+double gpslongitude = 0.0; double gpslongitudeOrig = 0.0;
 double gpsaltitude = 0.0;
 double gpsspeed = 0.0;
 double gpscourse = 0.0;
@@ -419,7 +420,7 @@ double convert_num_fixed(double num) {
 }
 
 static void parse(char * line) {
-    
+
     switch(minmea_sentence_id(line, false)) {
 
         case MINMEA_SENTENCE_GGA: {
@@ -434,7 +435,6 @@ static void parse(char * line) {
                          frame_gga.time.minutes,
                          frame_gga.time.seconds);
                 */
-              
                 double lat = convert_num_fixed(((double) minmea_tofloat(&frame_gga.latitude)));
                 double lon = convert_num_fixed(((double) minmea_tofloat(&frame_gga.longitude)));
                 if (isnan(lat))
@@ -442,13 +442,14 @@ static void parse(char * line) {
                 if (isnan(lon))
                     lon = 0;
                 ESP_LOGI(TAG, "LAT, LON: %f, %f", lat, lon);
-
+                if (gpslatitudeOrig == 0.0 && gpslongitudeOrig == 0.0){ // Controlar el punto de origen desde el que partimos
+                    gpslatitudeOrig = lat;
+                    gpslongitudeOrig = lon;
+                }
                 gpslatitudeAnt = gpslatitude;
                 gpslongitudeAnt = gpslongitude;
-
                 gpslatitude = lat;
                 gpslongitude = lon;
-
             }
             else {
                 ESP_LOGI(TAG, "$xxGGA sentence is not parsed\n");
@@ -494,7 +495,6 @@ static void parse(char * line) {
         } break;
 
         default:
-            //ESP_LOGI(TAG, "DEFAULT");
             ESP_LOGD(TAG, "Sentence - other");
             break;
     }
@@ -1045,7 +1045,7 @@ esp_mqtt_client_config_t mqtt_cfg = {
 
 esp_mqtt_client_handle_t client;
 
-static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event) // TO-DO ver si puedo hacer que en caso de error reinicie el MQTT con el client, mejora de seguridad
+static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event) // TO-DO FUTURA MEJORA DE SEGURIDAD ver si puedo hacer que en caso de error reinicie el MQTT con el client
 {
     switch (event->event_id)
     {
@@ -1747,7 +1747,7 @@ void app_main(void)
     configure_analog();
 
     // iniciar I2C
-    // Iniciar el display TO-DO ver como borrar el display, pero no borres su init; BORRA LOS CONFIG DEL DISPLAY SSD1306 EN LA VERSIÓN FINAL
+    // Iniciar el display TO-DO BORRA LOS CONFIG DEL DISPLAY SSD1306 EN LA VERSIÓN FINAL
     SSD1306_t dev;
     ESP_ERROR_CHECK(i2c_master_init(&dev, I2C_MASTER_SDA_IO, I2C_MASTER_SCL_IO, 0));
     ESP_LOGI(TAG, "I2C initialized successfully");
@@ -1829,7 +1829,7 @@ void app_main(void)
      * Read "Establishing Wi-Fi or Ethernet Connection" section in
      * examples/protocols/README.md for more information about this function.
      */
-    // TO-DO encontrar una forma de poder conectar a wi-fi sin que sea obligatorio conectar al wi-fi antes de que funcionen las cosas
+    // Según lo indicado en el manual de mantenimiento, esta parte de no permitir que continúe hasta que se haya conectado a una red wi-fi se hace para que el dispositivo no consuma datos ni realice acciones innecesariamente
     ESP_ERROR_CHECK(example_connect());
 
     /*
@@ -1838,25 +1838,25 @@ void app_main(void)
     client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_start(client);
 
-    // Task HTTP2 TO-DO aplicar mejoras de seguridad en un futuro con esto
+    // Task HTTP2 TO-DO FUTURA MEJORA DE SEGURIDAD
     // xTaskCreate(&http2_task, "http2_task", (1024 * 32), NULL, 5, NULL);
 
-    // TEST MOTOR ASPIRADOR
+    /* MOTOR ASPIRADOR */
     s_aspirador_state = true;
     blink_motorAspirador();
 
-    /* NMEA parser configuration */
+    /* NMEA-MINMEA parser configuration */
     /* DEL GITHUB DE OTRO COMPAÑERO, TOMO UN ESQUELETO DE TAREAS PARA GPS */
     init_uart();
+    /* FIN DEL GITHUB DE OTRO COMPAÑERO*/
 
-    //Start test task
     /* GPS */
-    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL); // 8192, no 1024 * 2
+    xTaskCreate(rx_task, "uart_rx_task", 8192, NULL, configMAX_PRIORITIES-4, NULL);
     /* GSM */
     xTaskCreate(tx_task, "uart_tx_task", 8192, NULL, configMAX_PRIORITIES-3, NULL);
-    /* FIN DEL GITHUB DE OTRO COMPAÑERO*/
     
-    // CALIBRACION SENSORES OZONO
+    
+    /* SECCION DE CALIBRACION DE SENSORES DE OZONO ON-THE-FLY */
 
     int count = 0;
     int countReadInRowBabor = 0;
@@ -1918,7 +1918,7 @@ void app_main(void)
     count++;
     }
     ESP_LOGI(TAG, "Calibracion COMPLETADA tras %d segundos", count);
-    /* SECCION DE CALIBRACION DE SENSORES DE OZONO ON-THE-FLY */
+    
     double R0babor = getResistencia(ozonoBaborC, RESLBABOR);
     double R0estribor = getResistencia(ozonoBaborC, RESLESTRIBOR);
     double R0trasFiltro = getResistencia(ozonoBaborC, RESLTRASFILTRO);
@@ -1932,8 +1932,13 @@ void app_main(void)
     double multCorrEstribor = 1.0;
     double multCorrBabor = 1.0;
     double multCorrTrasFiltro = 1.0;
+    /* FIN SECCION DE CALIBRACION DE SENSORES DE OZONO ON-THE-FLY */
 
-
+    /* SECCIÓN DATOS DE DIFERENCIA GPS, y su calibración, que ninguna otra parte del programa usa TO-DO ajusta experimentalmente y luego pon en sitio adecuado*/
+    double diferenciaRadioLongAnt = 0.0;
+    double diferenciaRadioLatAnt = 0.0;
+    double maxCiclosGiro = 3;
+    double contadorVuelta = maxCiclosGiro;
     /*
      * Bucle infinito
      */
@@ -2018,17 +2023,37 @@ void app_main(void)
         /* TO-DO añade márgenes de tolerancia y sistema de control según pruebas del prototipo final NORBERTO DECIDIÓ QUE HICIÉSEMOS A OJO */
         if (ozonoBabor == ozonoEstribor){
             ESP_LOGI(TAG, "O3B == 03E");
-            estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //0;
-        } else if (ozonoBabor > ozonoEstribor) { // A mayor velocidad y diferencia, más brusco el giro
+            //0;
+        } else if (ozonoBabor > ozonoEstribor) { // A mayor velocidad y diferencia, más brusco el giro.
             ESP_LOGI(TAG, "O3B > 03E");
-            estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //-85;
+            //-85;
         } else {
             ESP_LOGI(TAG, "O3B < 03E");
-            estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0; //= 85;
+            //= 85;
         }
-        /*TO-DO LOS GPS PARA TIMÓN INTERNO*/
+        estadoTimonExterno = (fmax(-85, fmin(85, (ozonoEstribor -ozonoBabor)/10 * (gpsspeed + 1.0))) - estadoTimonExterno)/2.0;
+
+        double diferenciaRadioLong = abs(gpslatitudeOrig - gpslatitude);
+        double diferenciaRadioLat = abs(gpslongitudeOrig - gpslongitude);
+        if (diferenciaRadioLong > 1.0 || diferenciaRadioLat > 1.0 ) { // TO-DO de momento lo acotamos para que si se va 1 minuto del origen de la vuelta, se ajustará
+            if (contadorVuelta > 0){
+                if (contadorVuelta == maxCiclosGiro){
+                    diferenciaRadioLongAnt = diferenciaRadioLong;
+                    diferenciaRadioLatAnt = diferenciaRadioLat;
+                }
+                estadoTimonExterno = -60;
+                
+            } else if (contadorVuelta < -maxCiclosGiro && contadorVuelta > (-2 * maxCiclosGiro) && (diferenciaRadioLongAnt < diferenciaRadioLong || diferenciaRadioLatAnt < diferenciaRadioLat)) { // Esta sección procura que si seguimos afuera y nos estamos yendo más lejos tras cierto tiempo tratemos de dar más la vuelta
+                estadoTimonExterno = -60;
+            } else estadoTimonExterno = 0;
+            contadorVuelta--;
+
+        } else {
+            contadorVuelta = maxCiclosGiro; // TO-DO ajustar según pruebas experimentales
+        }
+        /*TO-DO LOS GPS PARA TIMÓN INTERNO, calibrar según pruebas experimentales */
         if (gpsspeed - gpsspeedAnt > 50 || gpsspeed > 50) {
-            /*TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD, Y LOS PESOS ADECUADOS DEL DISPOSITIVO, TOMO LO DE GPS*/
+            /* TO-DO EXPANDIR UNA VEZ TENGA EL MÓDULO CON LA INFO ADECUADA PARA AJUSTAR EL MOVIMIENTO Y LA VELOCIDAD, Y LOS PESOS ADECUADOS DEL DISPOSITIVO, TOMO LO DE GPS */
             estadoTimonInterno = -45;
         } else {
             estadoTimonInterno = 45;
