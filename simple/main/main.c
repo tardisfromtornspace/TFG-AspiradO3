@@ -1844,6 +1844,7 @@ void app_main(void)
     /* MOTOR ASPIRADOR */
     s_aspirador_state = true;
     blink_motorAspirador();
+    ESP_LOGI(TAG, "Arrancando motor");
 
     /* NMEA-MINMEA parser configuration */
     /* DEL GITHUB DE OTRO COMPAÑERO, TOMO UN ESQUELETO DE TAREAS PARA GPS */
